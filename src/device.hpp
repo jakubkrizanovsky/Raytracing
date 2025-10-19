@@ -1,6 +1,11 @@
 #pragma once
 
+#include "window.hpp"
+
 #include <vulkan/vulkan.h>
+
+// std
+#include <vector>
 #include <string>
 
 namespace rte {
@@ -13,7 +18,7 @@ public:
     const bool enableValidationLayers = true;
 #endif
 
-    Device();
+    Device(Window& window);
     ~Device();
 
     // Not copyable or movable
@@ -23,20 +28,29 @@ public:
     Device &operator=(Device &&) = delete;
 				
 private:
+    Window& window;
     VkInstance instance;
-    VkDevice device;
     VkDebugUtilsMessengerEXT debugMessenger;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device;
+    VkQueue computeQueue;
+    VkQueue presentQueue;
+    VkCommandPool commandPool;
 
     void createInstance();
     void setupDebugMessenger();
-    // void pickPhysicalDevice();
-    // void createLogicalDevice();
-    // void createCommandPool();
+    void createWindowSurface();
+    void pickPhysicalDevice();
+    void createLogicalDevice();
+    void createCommandPool();
 
+    bool isDeviceSuitable(VkPhysicalDevice physDevice);
     bool checkValidationLayerSupport();
     std::vector<const char*> getRequiredExtensions();
+    bool findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& computeIndex, uint32_t& presentIndex);
 
     const std::string validationLayerName = "VK_LAYER_KHRONOS_validation";
+    const std::vector<const char *> deviceExtensions = {"VK_KHR_portability_subset", VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 };
 
 } // namespace rte
