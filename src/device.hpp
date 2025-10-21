@@ -34,6 +34,9 @@ public:
     }
     
     inline VkDevice getDevice() {return device;}
+    inline VkQueue getComputeQueue() {return computeQueue;}
+    inline VkQueue getPresentQueue() {return presentQueue;}
+    inline VkCommandPool getCommandPool() {return commandPool;}
     
 private:
     Window& window;

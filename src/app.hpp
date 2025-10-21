@@ -3,6 +3,7 @@
 #include "window.hpp"
 #include "device.hpp"
 #include "swapchain.hpp"
+#include "renderer.hpp"
 
 namespace rte {
 
@@ -12,7 +13,8 @@ public:
 private:
     Window window {};
     Device device {window};
-    Swapchain swapchain {window, device};
+    Renderer renderer {};
+    Swapchain swapchain {window, device, renderer};
 };
 
 } // namespace rte
