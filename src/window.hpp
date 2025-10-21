@@ -21,9 +21,9 @@ public:
 
     void createSurface(VkInstance instance);
     void destroySurface(VkInstance instance);
-    inline VkSurfaceKHR getSurface() {return surface;}
+    VkSurfaceKHR getSurface() {return surface;}
     bool shouldClose();
-    inline GLFWwindow* getWindow() {return window;}
+    GLFWwindow* getWindow() {return window;}
 
 private:
     GLFWwindow* window;

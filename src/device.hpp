@@ -27,16 +27,15 @@ public:
     Device(Device &&) = delete;
     Device &operator=(Device &&) = delete;
 
-    inline bool getSwapchainSupport(VkSurfaceCapabilitiesKHR &capabilities, std::vector<VkSurfaceFormatKHR>& formats, 
-            std::vector<VkPresentModeKHR>& presentModes) 
-    {
-        return querySwapchainSupport(physicalDevice, capabilities, formats, presentModes);
-    }
+    bool getSwapchainSupport(VkSurfaceCapabilitiesKHR &capabilities, std::vector<VkSurfaceFormatKHR>& formats, 
+            std::vector<VkPresentModeKHR>& presentModes);
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
+            VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     
-    inline VkDevice getDevice() {return device;}
-    inline VkQueue getComputeQueue() {return computeQueue;}
-    inline VkQueue getPresentQueue() {return presentQueue;}
-    inline VkCommandPool getCommandPool() {return commandPool;}
+    VkDevice getDevice() {return device;}
+    VkQueue getComputeQueue() {return computeQueue;}
+    VkQueue getPresentQueue() {return presentQueue;}
+    VkCommandPool getCommandPool() {return commandPool;}
     
 private:
     Window& window;
@@ -61,6 +60,7 @@ private:
     bool findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& computeIndex, uint32_t& presentIndex);
     bool querySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceCapabilitiesKHR &capabilities, 
         std::vector<VkSurfaceFormatKHR>& formats, std::vector<VkPresentModeKHR>& presentModes);
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     const std::string validationLayerName = "VK_LAYER_KHRONOS_validation";
     const std::vector<const char *> deviceExtensions = {"VK_KHR_portability_subset", VK_KHR_SWAPCHAIN_EXTENSION_NAME};

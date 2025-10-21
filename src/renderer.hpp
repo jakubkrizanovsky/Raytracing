@@ -1,14 +1,15 @@
 #pragma once
 
+#include "device.hpp"
+
 #include <vulkan/vulkan.h>
 
 namespace rte {
 
-class Renderer
-{
+class Renderer {
 public:
-    Renderer();
-    ~Renderer();
+    Renderer(Device& device) : device{device} {}
+    virtual ~Renderer() = default;
 
     // Not copyable or movable
     Renderer(const Renderer &) = delete;
@@ -16,7 +17,12 @@ public:
     Renderer(Renderer &&) = delete;
     Renderer &operator=(Renderer &&) = delete;
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image);
+    virtual void prepareFrame() = 0;
+    virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image);
+    virtual void setExtent(VkExtent2D newExtent) {extent = newExtent;}
+protected:
+    Device& device;
+    VkExtent2D extent;
 };
 
 } // namespace rte

@@ -36,8 +36,13 @@ void Swapchain::drawFrame() {
     vkResetFences(device.getDevice(), 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device.getDevice(), swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
+    VkResult result = vkAcquireNextImageKHR(device.getDevice(), swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
             VK_NULL_HANDLE, &imageIndex);
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("Failed to acquire swap chain image!");
+    }
+
+    renderer.prepareFrame();
 
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
     submitCommandBuffer(commandBuffers[currentFrame], imageIndex);
@@ -69,7 +74,7 @@ void Swapchain::createSwapchain() {
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.preTransform = capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -83,6 +88,8 @@ void Swapchain::createSwapchain() {
     vkGetSwapchainImagesKHR(device.getDevice(), swapchain, &imageCount, nullptr);
     images.resize(imageCount);
     vkGetSwapchainImagesKHR(device.getDevice(), swapchain, &imageCount, images.data());
+
+    renderer.setExtent(extent);
 }
 
 void Swapchain::createImageViews() {
@@ -198,7 +205,9 @@ void Swapchain::presentImage(uint32_t imageIndex) {
     presentInfo.pSwapchains = swapchains;
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+    if(vkQueuePresentKHR(device.getPresentQueue(), &presentInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to present swap chain image!");
+    }
 }
 
 VkSurfaceFormatKHR Swapchain::chooseSurfaceFormat(std::vector<VkSurfaceFormatKHR> availableFormats) {

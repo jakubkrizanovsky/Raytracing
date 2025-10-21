@@ -2,12 +2,6 @@
 
 namespace rte {
 
-Renderer::Renderer() {
-}
-
-Renderer::~Renderer() {
-}
-
 void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image) {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
