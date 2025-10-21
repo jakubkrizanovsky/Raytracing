@@ -4,7 +4,7 @@
 #include "device.hpp"
 #include "swapchain.hpp"
 #include "renderer.hpp"
-#include "test_renderer.hpp"
+#include "sequential_renderer.hpp"
 
 namespace rte {
 
@@ -14,7 +14,7 @@ public:
 private:
     Window window {};
     Device device {window};
-    TestRenderer renderer {device};
+    SequentialRenderer renderer {device};
     Swapchain swapchain {window, device, renderer};
 };
 
