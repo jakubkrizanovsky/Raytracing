@@ -11,73 +11,39 @@ Swapchain::Swapchain(Window& window, Device& device, Renderer& renderer) : windo
 {
     createSwapchain();
     createImageViews();
-    createCommandBuffer();
+    createCommandBuffers();
     createSyncObjects();
 }
 
 Swapchain::~Swapchain() {
+    for (auto i = 0; i < imageCount; i++) {
+        vkDestroySemaphore(device.getDevice(), renderFinishedSemaphores[i], nullptr);
+    }
+
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(device.getDevice(), imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(device.getDevice(), inFlightFences[i], nullptr);
+    }
+
     vkDestroySwapchainKHR(device.getDevice(), swapchain, nullptr);
     for (VkImageView imageView : imageViews) {
         vkDestroyImageView(device.getDevice(), imageView, nullptr);
     }
-
-    vkDestroySemaphore(device.getDevice(), imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(device.getDevice(), renderFinishedSemaphore, nullptr);
-    vkDestroyFence(device.getDevice(), inFlightFence, nullptr);
 }
 
 void Swapchain::drawFrame() {
-    vkWaitForFences(device.getDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device.getDevice(), 1, &inFlightFence);
+    vkWaitForFences(device.getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(device.getDevice(), 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device.getDevice(), swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    vkAcquireNextImageKHR(device.getDevice(), swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
+            VK_NULL_HANDLE, &imageIndex);
 
-    // record command buffer
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+    submitCommandBuffer(commandBuffers[currentFrame], imageIndex);
+    presentImage(imageIndex);
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to begin recording command buffer!");
-    }
-
-    renderer.recordCommandBuffer(commandBuffer, images[imageIndex]);
-
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to record command buffer!");
-    }
-
-    // submit command buffer
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
-
-    if (vkQueueSubmit(device.getComputeQueue(), 1, &submitInfo, inFlightFence) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to submit command buffer!");
-    }
-
-    // present image
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-
-    VkSwapchainKHR swapchains[] = {swapchain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapchains;
-    presentInfo.pImageIndices = &imageIndex;
-
-    vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void Swapchain::createSwapchain() {
@@ -86,7 +52,7 @@ void Swapchain::createSwapchain() {
     std::vector<VkPresentModeKHR> presentModes;
     device.getSwapchainSupport(capabilities, formats, presentModes);
 
-    uint32_t imageCount = capabilities.minImageCount + 1;
+    imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
         imageCount = capabilities.maxImageCount;
     }
@@ -107,7 +73,7 @@ void Swapchain::createSwapchain() {
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     createInfo.preTransform = capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
 
     if (vkCreateSwapchainKHR(device.getDevice(), &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
@@ -141,32 +107,98 @@ void Swapchain::createImageViews() {
     }
 }
 
-void Swapchain::createCommandBuffer() {
+void Swapchain::createCommandBuffers() {
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = device.getCommandPool();
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
-    if (vkAllocateCommandBuffers(device.getDevice(), &allocInfo, &commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device.getDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate command buffers!");
     }
 }
 
 void Swapchain::createSyncObjects() {
+    imageAvailableSemaphores.resize(imageCount);
+    renderFinishedSemaphores.resize(imageCount);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
     VkSemaphoreCreateInfo semaphoreInfo {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    for (auto i = 0; i < imageCount; i++) {
+        if (vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create semaphore for a frame!");
+        }
+    }
 
     VkFenceCreateInfo fenceInfo {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-            vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-            vkCreateFence(device.getDevice(), &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("Failed to create semaphores!");
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(device.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(device.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) 
+        {
+            throw std::runtime_error("Failed to create synchronization objects for a frame!");
+        }
     }
+}
+
+void Swapchain::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    vkResetCommandBuffer(commandBuffer,  0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to begin recording command buffer!");
+    }
+
+    renderer.recordCommandBuffer(commandBuffer, images[imageIndex]);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to record command buffer!");
+    }
+}
+
+void Swapchain::submitCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[imageIndex]};
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(device.getComputeQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to submit command buffer!");
+    }
+}
+
+void Swapchain::presentImage(uint32_t imageIndex) {
+    VkSemaphore waitSemaphores[] = {renderFinishedSemaphores[imageIndex]};
+    
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = waitSemaphores;
+
+    VkSwapchainKHR swapchains[] = {swapchain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapchains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
 }
 
 VkSurfaceFormatKHR Swapchain::chooseSurfaceFormat(std::vector<VkSurfaceFormatKHR> availableFormats) {
