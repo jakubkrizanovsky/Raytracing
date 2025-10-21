@@ -191,7 +191,15 @@ bool Device::isDeviceSuitable(VkPhysicalDevice physDevice) {
         requiredExtensions.erase(extension.extensionName);
     }
 
-    return requiredExtensions.empty();
+    if(!requiredExtensions.empty()) {
+        return false;
+    }
+
+    // check if swapchain is supported
+    VkSurfaceCapabilitiesKHR capabilities{}; 
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+    return querySwapchainSupport(physDevice, capabilities, formats, presentModes);
 }
 
 bool Device::checkValidationLayerSupport()
@@ -256,6 +264,24 @@ bool Device::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& c
     }
 
     return false;
+}
+
+bool Device::querySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceCapabilitiesKHR &capabilities, 
+        std::vector<VkSurfaceFormatKHR>& formats, std::vector<VkPresentModeKHR>& presentModes)
+{
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, window.getSurface(), &capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window.getSurface(), &formatCount, nullptr);
+
+    if(formatCount == 0) {
+        return false;
+    }
+
+    formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window.getSurface(), &formatCount, formats.data());
+
+    return true;
 }
 
 } // namespace rte

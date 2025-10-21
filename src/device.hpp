@@ -26,7 +26,15 @@ public:
     void operator=(const Device &) = delete;
     Device(Device &&) = delete;
     Device &operator=(Device &&) = delete;
-				
+
+    inline bool getSwapchainSupport(VkSurfaceCapabilitiesKHR &capabilities, std::vector<VkSurfaceFormatKHR>& formats, 
+            std::vector<VkPresentModeKHR>& presentModes) 
+    {
+        return querySwapchainSupport(physicalDevice, capabilities, formats, presentModes);
+    }
+    
+    inline VkDevice getDevice() {return device;}
+    
 private:
     Window& window;
     VkInstance instance;
@@ -48,6 +56,8 @@ private:
     bool checkValidationLayerSupport();
     std::vector<const char*> getRequiredExtensions();
     bool findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& computeIndex, uint32_t& presentIndex);
+    bool querySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceCapabilitiesKHR &capabilities, 
+        std::vector<VkSurfaceFormatKHR>& formats, std::vector<VkPresentModeKHR>& presentModes);
 
     const std::string validationLayerName = "VK_LAYER_KHRONOS_validation";
     const std::vector<const char *> deviceExtensions = {"VK_KHR_portability_subset", VK_KHR_SWAPCHAIN_EXTENSION_NAME};

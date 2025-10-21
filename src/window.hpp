@@ -23,6 +23,7 @@ public:
     void destroySurface(VkInstance instance);
     inline VkSurfaceKHR getSurface() {return surface;}
     bool shouldClose();
+    inline GLFWwindow* getWindow() {return window;}
 
 private:
     GLFWwindow* window;
