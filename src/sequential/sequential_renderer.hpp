@@ -16,11 +16,11 @@ public:
 
     void prepareFrame() override;
 private:
-    glm::vec3 reflectionRay(Ray& ray, uint recursive);
+    glm::vec3 raycast(Ray& ray);
     glm::vec3 shadowRay(RaycastHit hit);
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit* hit);
 
-    glm::vec3 reflect(Ray& ray, glm::vec3 normal);
+    glm::vec3 reflect(glm::vec3 rayDirection, glm::vec3 normal);
 
     const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
     const glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);

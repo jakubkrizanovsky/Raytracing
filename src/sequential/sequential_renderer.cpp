@@ -35,7 +35,7 @@ void SequentialRenderer::prepareFrame() {
 
             glm::vec3 pixelPosition = topLeft + x * xDiff * RIGHT - y * yDiff * UP;
             ray = {pixelPosition, cameraForward};
-            pixelColor = reflectionRay(ray, MAX_REFLECTIONS);
+            pixelColor = raycast(ray);
             
             data[pixelIndex + 2] = static_cast<uint8_t>(pixelColor.r * 255);
             data[pixelIndex + 1] = static_cast<uint8_t>(pixelColor.g * 255);
@@ -45,40 +45,42 @@ void SequentialRenderer::prepareFrame() {
     }
 }
 
-glm::vec3 SequentialRenderer::reflectionRay(Ray& ray, uint recursive) {
+glm::vec3 SequentialRenderer::raycast(Ray& ray) {
     glm::vec3 lightColor = {0, 0, 0};
+    Ray rays[MAX_REFLECTIONS + 1];
+    RaycastHit hits[MAX_REFLECTIONS] {};
+    Sphere* hitSpheres[MAX_REFLECTIONS] {};
+    rays[0] = ray;
 
-    bool hasHit = false;
-    RaycastHit hit{};
-    Sphere* hitSphere = nullptr;
-    RaycastHit currentHit{};
+    for (auto i = 0; i < MAX_REFLECTIONS; i++) {
 
-    for (Sphere& sphere : spheres) {
-        if (raySphereIntersect(ray, sphere, &currentHit) &&
-                (!hasHit || hit.distance > currentHit.distance)) 
-        {
-            hit = currentHit;
-            hitSphere = &sphere;
-            hasHit = true;
+        bool hasHit = false;
+        RaycastHit hit{};
+
+        for (Sphere& sphere : spheres) {
+            if (raySphereIntersect(rays[i], sphere, &hit) &&
+                    (!hasHit || hits[i].distance > hit.distance)) 
+            {
+                hasHit = true;
+                hits[i] = hit;
+                hitSpheres[i] = &sphere;
+                rays[i+1] = {hit.position, reflect(rays[i].direction, hit.normal)};
+            }
         }
-        
     }
 
-    if (hasHit) {
-        lightColor += ambientLight;
-        lightColor += shadowRay(hit);
-        
-        if (recursive > 0) {
-            Ray newRay = {hit.position, reflect(ray, hit.normal)};
-            glm::vec3 reflectedLight = reflectionRay(newRay, recursive-1);
-            float intensity = glm::dot(newRay.direction, hit.normal);
-            lightColor += intensity * reflectedLight;
+    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
+        if (hits[i].distance > MIN_HIT_DISTANCE) { // has hit
+            float reflectionIntensity = glm::dot(rays[i].direction, hits[i].normal);
+            lightColor += reflectionIntensity * lightColor;
+            lightColor += ambientLight;
+            lightColor += shadowRay(hits[i]);
+            lightColor *= hitSpheres[i]->color;
+            lightColor = glm::clamp(lightColor, ZERO, ONE);
         }
-
-        lightColor *= hitSphere->color;
     }
 
-    return glm::clamp(lightColor, ZERO, ONE);;
+    return lightColor;
 }
 
 glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
@@ -131,8 +133,8 @@ bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere &sphere, RaycastHit
     return true;
 }
 
-glm::vec3 SequentialRenderer::reflect(Ray &ray, glm::vec3 normal) {
-    return ray.direction - 2.0f * normal * glm::dot(ray.direction, normal);
+glm::vec3 SequentialRenderer::reflect(glm::vec3 rayDirection, glm::vec3 normal) {
+    return rayDirection - 2.0f * normal * glm::dot(rayDirection, normal);
 }
 
 } // namespace rte
