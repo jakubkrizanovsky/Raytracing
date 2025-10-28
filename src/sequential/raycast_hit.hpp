@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sphere.hpp"
+#include <core/sphere.hpp>
 
 #include <glm/glm.hpp>
 

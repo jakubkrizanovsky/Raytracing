@@ -1,11 +1,12 @@
 #pragma once
 
-#include "cpu_renderer.hpp"
-
-#include <glm/glm.hpp>
-#include "sphere.hpp"
+#include <core/cpu_renderer.hpp>
+#include <core/sphere.hpp>
 #include "ray.hpp"
 #include "raycast_hit.hpp"
+
+#include <glm/glm.hpp>
+
 
 namespace rte {
 

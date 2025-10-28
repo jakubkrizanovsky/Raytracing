@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cpu_renderer.hpp"
+#include <core/cpu_renderer.hpp>
 
 namespace rte {
 

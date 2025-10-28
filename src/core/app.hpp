@@ -4,7 +4,7 @@
 #include "device.hpp"
 #include "swapchain.hpp"
 #include "renderer.hpp"
-#include "sequential_renderer.hpp"
+#include <sequential/sequential_renderer.hpp>
 
 namespace rte {
 
