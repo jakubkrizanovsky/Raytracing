@@ -6,10 +6,12 @@
 
 namespace rte {
 
+constexpr glm::vec3 ZERO = {0, 0, 0};
 constexpr glm::vec3 RIGHT = {1, 0, 0};
 constexpr glm::vec3 UP = {0, 1, 0};
 constexpr glm::vec3 FORWARD = {0, 0, 1};
-constexpr uint MAX_REFLECTIONS = 10;
+constexpr glm::vec3 ONE = {1, 1, 1};
+constexpr uint MAX_REFLECTIONS = 5;
 constexpr float MIN_HIT_DISTANCE = 0.001f;
 
 void SequentialRenderer::prepareFrame() {
@@ -63,11 +65,20 @@ glm::vec3 SequentialRenderer::reflectionRay(Ray& ray, uint recursive) {
     }
 
     if (hasHit) {
+        lightColor += ambientLight;
         lightColor += shadowRay(hit);
+        
+        if (recursive > 0) {
+            Ray newRay = {hit.position, reflect(ray, hit.normal)};
+            glm::vec3 reflectedLight = reflectionRay(newRay, recursive-1);
+            float intensity = glm::dot(newRay.direction, hit.normal);
+            lightColor += intensity * reflectedLight;
+        }
+
         lightColor *= hitSphere->color;
     }
 
-    return lightColor;
+    return glm::clamp(lightColor, ZERO, ONE);;
 }
 
 glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
@@ -80,7 +91,8 @@ glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
         }
     }
 
-    return {1, 1, 1};
+    float intensity = glm::dot(shadowRay.direction, hit.normal);
+    return intensity * ONE;
 }
 
 bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere &sphere, RaycastHit* hit) {
@@ -110,11 +122,17 @@ bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere &sphere, RaycastHit
     }
 
     glm::vec3 position = ray.origin + ray.direction * distance;
+    glm::vec3 normal = glm::normalize(position - sphere.position);
 
     hit->position = position;
+    hit->normal = normal;
     hit->distance = distance;
 
     return true;
+}
+
+glm::vec3 SequentialRenderer::reflect(Ray &ray, glm::vec3 normal) {
+    return ray.direction - 2.0f * normal * glm::dot(ray.direction, normal);
 }
 
 } // namespace rte
