@@ -4,6 +4,7 @@
 #include "device.hpp"
 #include "swapchain.hpp"
 #include "renderer.hpp"
+#include <simd/simd_renderer.hpp>
 #include <sequential/sequential_renderer.hpp>
 
 namespace rte {
@@ -14,7 +15,7 @@ public:
 private:
     Window window {};
     Device device {window};
-    SequentialRenderer renderer {device};
+    SIMDRenderer renderer {device};
     Swapchain swapchain {window, device, renderer};
 };
 

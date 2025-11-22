@@ -2,6 +2,7 @@
 
 // std
 #include <vector>
+#include <limits>
 #include <iostream>
 
 namespace rte {
@@ -49,21 +50,18 @@ glm::vec3 SequentialRenderer::raycast(Ray& ray) {
     glm::vec3 lightColor = {0, 0, 0};
     Ray rays[MAX_REFLECTIONS + 1];
     RaycastHit hits[MAX_REFLECTIONS] {};
-    Sphere* hitSpheres[MAX_REFLECTIONS] {};
+    glm::vec3 hitColors[MAX_REFLECTIONS] {};
     rays[0] = ray;
 
-    for (auto i = 0; i < MAX_REFLECTIONS; i++) {
-
-        bool hasHit = false;
+    for (auto i = 0; i < MAX_REFLECTIONS; i++) {        
+        hits[i].distance = std::numeric_limits<float>::max();
         RaycastHit hit{};
-
         for (Sphere& sphere : spheres) {
             if (raySphereIntersect(rays[i], sphere, &hit) &&
-                    (!hasHit || hits[i].distance > hit.distance)) 
+                    hit.distance < hits[i].distance) 
             {
-                hasHit = true;
                 hits[i] = hit;
-                hitSpheres[i] = &sphere;
+                hitColors[i] = sphere.color;
                 rays[i+1] = {hit.position, reflect(rays[i].direction, hit.normal)};
             }
         }
@@ -75,7 +73,7 @@ glm::vec3 SequentialRenderer::raycast(Ray& ray) {
             lightColor += reflectionIntensity * lightColor;
             lightColor += ambientLight;
             lightColor += shadowRay(hits[i]);
-            lightColor *= hitSpheres[i]->color;
+            lightColor *= hitColors[i];
             lightColor = glm::clamp(lightColor, ZERO, ONE);
         }
     }
