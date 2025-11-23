@@ -21,29 +21,29 @@ public:
     void prepareFrame() override;
 private:
     Vec3Field raycast(RayField ray);
-    glm::vec3 shadowRay(RaycastHit hit);
+    Vec3x4 shadowRay(RaycastHitx4 hit);
     uint32x4_t raySphereIntersect(Rayx4 ray, Sphere& sphere, RaycastHitx4* hit);
 
     glm::vec3 reflect(glm::vec3 rayDirection, glm::vec3 normal);
 
-    const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
-    const glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
+    const Vec3x4 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
+    const Vec3x4 ambientLight = {0.1f};
     std::vector<Sphere> spheres = {
         {                   // first sphere 
             {0, 0, 0},      // in origin
             1,              // radius 1
             {0, 1, 1}       // cyan color
-        }//,
-        // {                   // second sphere 
-        //     {1, 0.5f, 1},   // slightly moved
-        //     0.5f,           // half the size
-        //     {1, 0.1f, 0.1f} // red color
-        // },
-        // {                   // third sphere 
-        //     {-1, 0.5f, -1}, // slightly moved
-        //     0.5f,           // half the size
-        //     {0.1f, 1, 0.1f} // green color
-        // }
+        },
+        {                   // second sphere 
+            {1, 0.5f, 1},   // slightly moved
+            0.5f,           // half the size
+            {1, 0.1f, 0.1f} // red color
+        },
+        {                   // third sphere 
+            {-1, 0.5f, -1}, // slightly moved
+            0.5f,           // half the size
+            {0.1f, 1, 0.1f} // green color
+        }
     };
 };
 

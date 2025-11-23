@@ -67,7 +67,7 @@ Vec3Field SIMDRenderer::raycast(RayField sceneRays) {
 
         Rayx4 rays[MAX_REFLECTIONS + 1];
         RaycastHitx4 hits[MAX_REFLECTIONS] {};
-        Sphere* hitSpheres[MAX_REFLECTIONS] {};
+        Vec3x4 hitColors[MAX_REFLECTIONS] {};
 
         float32x4_t originsX = vld1q_f32(&sceneRays.origins.x[a]);
         float32x4_t originsY = vld1q_f32(&sceneRays.origins.y[a]);
@@ -81,12 +81,13 @@ Vec3Field SIMDRenderer::raycast(RayField sceneRays) {
 
         rays[0] = {origins, directions};
 
-        const float32x4_t white = vdupq_n_f32(1.0f);
-        float32x4_t lightColor = vdupq_n_f32(0.0f);
+        const Vec3x4 white = {1.0f};
+        const Vec3x4 black = {0.0f};
+        Vec3x4 lightColor(0.0f);
 
         //for (auto i = 0; i < MAX_REFLECTIONS; i++) {
 
-
+            hits[0].distance = vdupq_n_f32(std::numeric_limits<float>::max());
 
             bool hasHit = false;
             RaycastHitx4 hit{};
@@ -96,53 +97,68 @@ Vec3Field SIMDRenderer::raycast(RayField sceneRays) {
                 uint32x4_t closerMask = vcltq_f32(hit.distance, hits[0].distance);
                 uint32x4_t mask = vandq_u32(hitMask, closerMask);
 
-                lightColor = vbslq_f32(hitMask, white, lightColor);
-                //hits[0].distance = 
+                // select hit values based on mask
+                hits[0].normal.x = vbslq_f32(mask, hit.normal.x, hits[0].normal.x);
+                hits[0].normal.y = vbslq_f32(mask, hit.normal.y, hits[0].normal.y);
+                hits[0].normal.z = vbslq_f32(mask, hit.normal.z, hits[0].normal.z);
+                hits[0].position.x = vbslq_f32(mask, hit.position.x, hits[0].position.x);
+                hits[0].position.y = vbslq_f32(mask, hit.position.y, hits[0].position.y);
+                hits[0].position.z = vbslq_f32(mask, hit.position.z, hits[0].position.z);
+                hits[0].distance = vbslq_f32(mask, hit.distance, hits[0].distance);
+                hits[0].mask = vorrq_u32(hits[0].mask, hitMask);
 
+                Vec3x4 sphereColor(sphere.color);
+                hitColors[0].x = vbslq_f32(mask, sphereColor.x, hitColors[0].x);
+                hitColors[0].y = vbslq_f32(mask, sphereColor.y, hitColors[0].y);
+                hitColors[0].z = vbslq_f32(mask, sphereColor.z, hitColors[0].z);
 
-                // if (raySphereIntersect(rays[i], sphere, &hit) &&
-                //         (!hasHit || hits[i].distance > hit.distance)) 
-                // {
-                //     hasHit = true;
-                //     hits[i] = hit;
-                //     hitSpheres[i] = &sphere;
-                //     rays[i+1] = {hit.position, reflect(rays[i].direction, hit.normal)};
-                // }
+                //TODO - calculate next ray
+                //rays[i+1] = {hit.position, reflect(rays[i].direction, hit.normal)};
             }
         //}
 
         // for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-        //     if (hits[i].distance > MIN_HIT_DISTANCE) { // has hit
-        //         float reflectionIntensity = glm::dot(rays[i].direction, hits[i].normal);
-        //         lightColor += reflectionIntensity * lightColor;
-        //         lightColor += ambientLight;
-        //         lightColor += shadowRay(hits[i]);
-        //         lightColor *= hitSpheres[i]->color;
-        //         lightColor = glm::clamp(lightColor, ZERO, ONE);
-        //     }
-        // }
+            Vec3x4 rayDir = -rays[0].direction;
+            float32x4_t reflectionIntensity = dot_x4(rayDir, hits[0].normal);
+            reflectionIntensity = vmaxq_f32(vdupq_n_f32(0.0f), reflectionIntensity);
+            lightColor = lightColor * reflectionIntensity;
+            lightColor += ambientLight;
+            lightColor += shadowRay(hits[0]);
+            lightColor *= hitColors[0];
 
-        vst1q_f32(&lightColors.x[a], lightColor);
-        vst1q_f32(&lightColors.y[a], lightColor);
-        vst1q_f32(&lightColors.z[a], lightColor);
+            //clamp01
+            lightColor.x = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.x));
+            lightColor.y = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.y));
+            lightColor.z = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.z));
+
+            //mask if not hit
+            lightColor.x = vbslq_f32(hits[0].mask, lightColor.x, black.x);
+            lightColor.y = vbslq_f32(hits[0].mask, lightColor.y, black.y);
+            lightColor.z = vbslq_f32(hits[0].mask, lightColor.z, black.z);
+        //}
+
+        vst1q_f32(&lightColors.x[a], lightColor.x);
+        vst1q_f32(&lightColors.y[a], lightColor.y);
+        vst1q_f32(&lightColors.z[a], lightColor.z);
     }
 
     return lightColors;
 }
 
-// glm::vec3 SIMDRenderer::shadowRay(RaycastHit hit) {
-//     Ray shadowRay = {hit.position, inverseLightDirection};
+Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
+    Rayx4 shadowRay = {hit.position, inverseLightDirection};
 
-//     for (Sphere& sphere : spheres) {
-//         RaycastHit shadowHit;
-//         if (raySphereIntersect(shadowRay, sphere, &shadowHit)) {
-//             return {0, 0, 0};
-//         }
-//     }
+    uint32x4_t mask;
+    for (Sphere& sphere : spheres) {
+        RaycastHitx4 shadowHit;
+        uint32x4_t hitMask = raySphereIntersect(shadowRay, sphere, &shadowHit);
+        mask = vorrq_u32(mask, hitMask);
+    }
 
-//     float intensity = glm::dot(shadowRay.direction, hit.normal);
-//     return intensity * ONE;
-// }
+    float32x4_t intensity = dot_x4(shadowRay.direction, hit.normal);
+    intensity = vbslq_f32(mask, vdupq_n_f32(0.0f), intensity);
+    return {intensity, intensity, intensity};
+}
 
 uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHitx4* hit) {
     Vec3x4 spherePosition = {
@@ -177,11 +193,12 @@ uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHi
 
     float32x4_t distance = vminq_f32(x1, x2);
     Vec3x4 position = ray.origin + ray.direction * distance;
-    Vec3x4 normal = (position - spherePosition).normalize();
+    Vec3x4 normal = (position - spherePosition).normalized();
     
     hit->distance = distance;
     hit->position = position;
     hit->normal = normal;
+    hit->mask = mask;
 
     return mask;
 }

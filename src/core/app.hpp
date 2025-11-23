@@ -16,6 +16,7 @@ private:
     Window window {};
     Device device {window};
     SIMDRenderer renderer {device};
+    //SequentialRenderer renderer {device};
     Swapchain swapchain {window, device, renderer};
 };
 

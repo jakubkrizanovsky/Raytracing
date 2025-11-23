@@ -69,8 +69,8 @@ glm::vec3 SequentialRenderer::raycast(Ray& ray) {
 
     for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
         if (hits[i].distance > MIN_HIT_DISTANCE) { // has hit
-            float reflectionIntensity = glm::dot(rays[i].direction, hits[i].normal);
-            lightColor += reflectionIntensity * lightColor;
+            float reflectionIntensity = glm::dot(-rays[i].direction, hits[i].normal);
+            lightColor *= reflectionIntensity;
             lightColor += ambientLight;
             lightColor += shadowRay(hits[i]);
             lightColor *= hitColors[i];
