@@ -24,7 +24,7 @@ private:
     Vec3x4 shadowRay(RaycastHitx4 hit);
     uint32x4_t raySphereIntersect(Rayx4 ray, Sphere& sphere, RaycastHitx4* hit);
 
-    glm::vec3 reflect(glm::vec3 rayDirection, glm::vec3 normal);
+    Vec3x4 reflect(Vec3x4 rayDirection, Vec3x4 normal);
 
     const Vec3x4 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
     const Vec3x4 ambientLight = {0.1f};
