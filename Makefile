@@ -5,11 +5,12 @@ SRC_DIR = ./src
 OBJ_DIR = ./obj
 
 CXX = g++
-CXXFLAGS = -std=c++17 -I$(SRC_DIR) -I$(VULKAN_SDK_PATH)/include -I$(LIBS_PATH)/include
+CXXFLAGS = -std=c++17 -I$(SRC_DIR) -I$(VULKAN_SDK_PATH)/include -I$(LIBS_PATH)/include -MMD -MP
 LDFLAGS = -L$(LIBS_PATH)/lib -L$(VULKAN_SDK_PATH)/lib -Wl,-rpath,$(VULKAN_SDK_PATH)/lib `pkg-config --static --libs glfw3` -lvulkan
 
 SRC_FILES := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+DEP_FILES := $(OBJ_FILES:.o=.d)
 
 COMP_SRCS = $(shell find ./shaders -type f -name "*.comp")
 COMP_OBJS = $(patsubst %.comp, %.comp.spv, $(COMP_SRCS))
@@ -27,9 +28,20 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 .PHONY: run clean
 
 run: $(TARGET)
-	./$(TARGET)
+	./$(TARGET) $(ARGS)
+
+run-sequential: $(TARGET)
+	./$(TARGET) --sequential
+
+run-simd: $(TARGET)
+	./$(TARGET) --simd
+
+run-gpu: $(TARGET)
+	./$(TARGET) --gpu
 
 clean:
 	rm -f $(TARGET)
 	rm -rf $(OBJ_DIR)
 	rm -f shaders/*.spv
+
+-include $(DEP_FILES)

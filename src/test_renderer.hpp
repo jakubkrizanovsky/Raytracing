@@ -6,7 +6,7 @@ namespace rte {
 
 class TestRenderer : public CpuRenderer {
 public:
-    TestRenderer(Device& device) : CpuRenderer{device} {}
+    TestRenderer(std::shared_ptr<Device> device) : CpuRenderer{device} {}
 
     void prepareFrame() override;
 private:

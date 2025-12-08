@@ -8,7 +8,7 @@ namespace rte {
 
 class Renderer {
 public:
-    Renderer(Device& device) : device{device} {}
+    Renderer(std::shared_ptr<Device> device) : device{device} {}
     virtual ~Renderer() = default;
 
     // Not copyable or movable
@@ -21,7 +21,7 @@ public:
     virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image);
     virtual void setExtent(VkExtent2D newExtent) {extent = newExtent;}
 protected:
-    Device& device;
+    std::shared_ptr<Device> device;
     VkExtent2D extent;
 };
 

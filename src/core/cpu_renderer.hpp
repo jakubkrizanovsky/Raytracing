@@ -6,7 +6,7 @@ namespace rte {
 
 class CpuRenderer : public Renderer {
 public:
-    CpuRenderer(Device& device) : Renderer{device} {}
+    CpuRenderer(std::shared_ptr<Device> device) : Renderer{device} {}
     ~CpuRenderer() override;
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image) override;

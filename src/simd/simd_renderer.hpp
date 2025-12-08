@@ -16,7 +16,7 @@ namespace rte {
 
 class SIMDRenderer : public CpuRenderer {
 public:
-    SIMDRenderer(Device& device) : CpuRenderer{device} {}
+    SIMDRenderer(std::shared_ptr<Device> device) : CpuRenderer{device} {}
 
     void prepareFrame() override;
 private:

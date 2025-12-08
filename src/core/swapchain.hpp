@@ -14,7 +14,7 @@ class Swapchain {
 public:
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
-    Swapchain(Window& window, Device& device, Renderer& renderer);
+    Swapchain(std::shared_ptr<Window> window, std::shared_ptr<Device> device, std::shared_ptr<Renderer> renderer);
     ~Swapchain();
 
     // Not copyable or movable
@@ -25,9 +25,9 @@ public:
 
     void drawFrame();
 private:
-    Window& window;
-    Device& device;
-    Renderer& renderer;
+    std::shared_ptr<Window> window;
+    std::shared_ptr<Device> device;
+    std::shared_ptr<Renderer> renderer;
     VkSwapchainKHR swapchain;
     VkSurfaceFormatKHR surfaceFormat;
     VkExtent2D extent;

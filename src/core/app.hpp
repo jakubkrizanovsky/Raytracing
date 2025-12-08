@@ -4,20 +4,24 @@
 #include "device.hpp"
 #include "swapchain.hpp"
 #include "renderer.hpp"
-#include <simd/simd_renderer.hpp>
-#include <sequential/sequential_renderer.hpp>
+#include "run_type.hpp"
+
+// std
+#include <memory>
 
 namespace rte {
 
 class App {
 public:
+    App(RunType runType);
     void run();
 private:
-    Window window {};
-    Device device {window};
-    //SequentialRenderer renderer {device};
-    SIMDRenderer renderer {device};
-    Swapchain swapchain {window, device, renderer};
+    std::shared_ptr<Window> window;
+    std::shared_ptr<Device> device;
+    std::shared_ptr<Renderer> renderer;
+    std::unique_ptr<Swapchain> swapchain;
+
+    std::shared_ptr<Renderer> createRenderer(RunType runType);
 };
 
 } // namespace rte

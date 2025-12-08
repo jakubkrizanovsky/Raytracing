@@ -17,7 +17,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
-Device::Device(Window& window) : window(window) {
+Device::Device(std::shared_ptr<Window> window) : window(window) {
     createInstance();
     setupDebugMessenger();
     createWindowSurface();
@@ -27,7 +27,7 @@ Device::Device(Window& window) : window(window) {
 }
 
 Device::~Device() {
-    window.destroySurface(instance);
+    window->destroySurface(instance);
 
     if(enableValidationLayers) {
         auto vkDestroyDebugUtilsMessengerEXT =
@@ -136,7 +136,7 @@ void Device::setupDebugMessenger() {
 }
 
 void Device::createWindowSurface() {
-    window.createSurface(instance);
+    window->createSurface(instance);
 }
 
 void Device::pickPhysicalDevice() {
@@ -287,7 +287,7 @@ bool Device::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& c
         }
 
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, window.getSurface(), &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, window->getSurface(), &presentSupport);
         if (properties.queueCount > 0 && presentSupport) {
             presentIndex = i;
             presentFound = true;
@@ -304,17 +304,17 @@ bool Device::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, uint32_t& c
 bool Device::querySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceCapabilitiesKHR &capabilities, 
         std::vector<VkSurfaceFormatKHR>& formats, std::vector<VkPresentModeKHR>& presentModes)
 {
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, window.getSurface(), &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, window->getSurface(), &capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window.getSurface(), &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window->getSurface(), &formatCount, nullptr);
 
     if(formatCount == 0) {
         return false;
     }
 
     formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window.getSurface(), &formatCount, formats.data());
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, window->getSurface(), &formatCount, formats.data());
 
     return true;
 }

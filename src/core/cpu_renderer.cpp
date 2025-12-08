@@ -59,18 +59,18 @@ void CpuRenderer::setExtent(VkExtent2D extent) {
 
 void CpuRenderer::createStagingBuffer() {
     VkDeviceSize bufferSize = extent.width * extent.height * 4;
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    device->createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             stagingBuffer, stagingBufferMemory);
 
-    vkMapMemory(device.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &stagingData);
+    vkMapMemory(device->getDevice(), stagingBufferMemory, 0, bufferSize, 0, &stagingData);
 }
 
 void CpuRenderer::cleanupStagingBuffer(){
     if (stagingBuffer != VK_NULL_HANDLE) {
-        vkUnmapMemory(device.getDevice(), stagingBufferMemory);
-        vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
-        vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
+        vkUnmapMemory(device->getDevice(), stagingBufferMemory);
+        vkDestroyBuffer(device->getDevice(), stagingBuffer, nullptr);
+        vkFreeMemory(device->getDevice(), stagingBufferMemory, nullptr);
     }
 }
 

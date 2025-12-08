@@ -18,7 +18,7 @@ public:
     const bool enableValidationLayers = true;
 #endif
 
-    Device(Window& window);
+    Device(std::shared_ptr<Window> window);
     ~Device();
 
     // Not copyable or movable
@@ -38,7 +38,7 @@ public:
     VkCommandPool getCommandPool() {return commandPool;}
     
 private:
-    Window& window;
+    std::shared_ptr<Window> window;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugMessenger;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;

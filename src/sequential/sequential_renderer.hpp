@@ -12,7 +12,7 @@ namespace rte {
 
 class SequentialRenderer : public CpuRenderer {
 public:
-    SequentialRenderer(Device& device) : CpuRenderer{device} {}
+    SequentialRenderer(std::shared_ptr<Device> device) : CpuRenderer{device} {}
 
     void prepareFrame() override;
 private:
