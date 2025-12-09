@@ -4,6 +4,7 @@
 #include <core/sphere.hpp>
 #include "ray.hpp"
 #include "raycast_hit.hpp"
+#include "sequential_camera.hpp"
 
 #include <glm/glm.hpp>
 
@@ -21,6 +22,8 @@ private:
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit* hit);
 
     glm::vec3 reflect(glm::vec3 rayDirection, glm::vec3 normal);
+
+    SequentialCamera camera = SequentialCamera({{0, 0, -5}, {0, 0, 1}, 90.0f});
 
     const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
     const glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
