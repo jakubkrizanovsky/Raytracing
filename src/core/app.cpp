@@ -1,5 +1,5 @@
 #include "app.hpp"
-#include <test_renderer.hpp>
+#include <gpu/gpu_renderer.hpp>
 #include <sequential/sequential_renderer.hpp>
 #include <simd/simd_renderer.hpp>
 
@@ -14,6 +14,7 @@ App::App(RunType runType) {
     device = std::make_shared<Device>(window);
     renderer = createRenderer(runType);
     swapchain = std::make_unique<Swapchain>(window, device, renderer);
+    computePipeline = std::make_unique<ComputePipeline>(device);
 }
 
 void App::run() {
@@ -33,7 +34,7 @@ std::shared_ptr<Renderer> App::createRenderer(RunType runType) {
         case RunType::SIMD:
             return std::make_shared<SIMDRenderer>(device);
         case RunType::GPU:
-            return std::make_shared<TestRenderer>(device);
+            return std::make_shared<GPURenderer>(device);
     }
 }
 
