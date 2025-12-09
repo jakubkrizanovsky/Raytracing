@@ -9,4 +9,4 @@ constexpr glm::vec3 FORWARD = {0, 0, 1};
 constexpr glm::vec3 ONE = {1, 1, 1};
 
 constexpr glm::vec3 BLACK = {0, 0, 0};
-constexpr glm::vec3 WHITE = {0, 0, 0};
+constexpr glm::vec3 WHITE = {1, 1, 1};
