@@ -40,12 +40,12 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
         hits[i].distance = std::numeric_limits<float>::max();
         RaycastHit hit{};
         for (Sphere& sphere : spheres) {
-            if (raySphereIntersect(rays[i], sphere, &hit) &&
+            if (raySphereIntersect(rays[i], sphere, hit) &&
                     hit.distance < hits[i].distance) 
             {
                 hits[i] = hit;
                 hitColors[i] = sphere.color;
-                rays[i+1] = {hit.position, reflect(rays[i].direction, hit.normal)};
+                rays[i+1] = {hit.position, glm::reflect(rays[i].direction, hit.normal)};
             }
         }
     }
@@ -68,8 +68,8 @@ glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
     Ray shadowRay = {hit.position, inverseLightDirection};
 
     for (Sphere& sphere : spheres) {
-        RaycastHit shadowHit;
-        if (raySphereIntersect(shadowRay, sphere, &shadowHit)) {
+        RaycastHit shadowHit{};
+        if (raySphereIntersect(shadowRay, sphere, shadowHit)) {
             return BLACK;
         }
     }
@@ -78,7 +78,7 @@ glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
     return intensity * WHITE;
 }
 
-bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere &sphere, RaycastHit* hit) {
+bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit) {
     glm::vec3 positionDelta = sphere.position - ray.origin;
 
     float a = glm::dot(ray.direction, ray.direction);
@@ -95,27 +95,18 @@ bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere &sphere, RaycastHit
         x2 = (-b + sqrt(determinant)) / (2.0f * a);
     }
 
-    float distance = 0;
     if(x1 > MIN_HIT_DISTANCE) {
-        distance = x1;
+        hit.distance = x1;
     } else if(x2 > MIN_HIT_DISTANCE) {
-        distance = x2;
+        hit.distance = x2;
     } else {
         return false;
     }
 
-    glm::vec3 position = ray.origin + ray.direction * distance;
-    glm::vec3 normal = glm::normalize(position - sphere.position);
-
-    hit->position = position;
-    hit->normal = normal;
-    hit->distance = distance;
+    hit.position = ray.origin + ray.direction * hit.distance;
+    hit.normal = glm::normalize(hit.position - sphere.position);
 
     return true;
-}
-
-glm::vec3 SequentialRenderer::reflect(glm::vec3 rayDirection, glm::vec3 normal) {
-    return rayDirection - 2.0f * normal * glm::dot(rayDirection, normal);
 }
 
 } // namespace rte

@@ -19,9 +19,7 @@ public:
 private:
     glm::vec3 raycast(Ray& ray);
     glm::vec3 shadowRay(RaycastHit hit);
-    bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit* hit);
-
-    glm::vec3 reflect(glm::vec3 rayDirection, glm::vec3 normal);
+    bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit);
 
     SequentialCamera camera = SequentialCamera({{0, 0, -5}, {0, 0, 1}, 90.0f});
 

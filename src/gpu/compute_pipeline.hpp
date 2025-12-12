@@ -8,6 +8,9 @@ namespace rte {
 
 class ComputePipeline {
 public:
+    static constexpr std::string_view SHADER_PATH = "shaders/raytracer.comp.spv";
+    static constexpr VkDeviceSize INPUT_BUFFER_SIZE = 2048; //TODO - should probably not be fixed size
+
     ComputePipeline(std::shared_ptr<Device> device);
     ~ComputePipeline();
 

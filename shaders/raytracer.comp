@@ -1,0 +1,156 @@
+#version 450
+
+// This defines the local workgroup size: 16 threads in X, 1 in Y and Z
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set=0, binding=0) readonly buffer Input {
+    uint input_data[];
+};
+
+layout(binding = 1, rgba8) uniform image2D outputImage;
+
+//TODO - pass these as cam params instead of consts
+const vec3 camPosition = vec3(0.0, 0.0, -5.0);
+const vec3 camForward = vec3(0.0, 0.0, 1.0);
+const float camFov = 1.570796; // pi/2
+const int width = 1600;
+const int height = 1200;
+const vec3 inverseLightDirection = normalize(vec3(1.0, 1.0, -1.0));
+const vec3 ambientLight = vec3(0.1f);
+
+struct Ray {
+    vec3 origin;
+    vec3 direction;
+};
+
+struct Sphere {
+    vec3 position;
+    float radius;
+    vec3 color;
+};
+
+struct RaycastHit {
+    bool hit;
+    float distance;
+    vec3 position;
+    vec3 normal;
+};
+
+const vec3 UP = vec3(0.0, 1.0, 0.0);
+const int MAX_REFLECTIONS = 5;
+const float MIN_HIT_DISTANCE = 0.001f;
+const float FLOAT_MAX = 3.402823466e+38;
+
+const int NUM_SPHERES = 3;
+Sphere spheres[NUM_SPHERES] = Sphere[NUM_SPHERES](
+    Sphere(vec3(0.0, 0.0, 0.0), 1.0, vec3(0.0, 1.0, 1.0)),      // cyan
+    Sphere(vec3(1.0, 0.5, 1.0), 0.5, vec3(1.0, 0.1, 0.1)),      // red
+    Sphere(vec3(-1.0, 0.5, -1.0), 0.5, vec3(0.1, 1.0, 0.1))     // green
+);
+
+Ray getCameraRay(ivec2 pixelCoords) {
+    vec3 camRight = cross(camForward, UP);
+    float gx = -tan(0.5 * camFov);
+    float gy = gx * (height - 1.0) / (width - 1.0);
+    vec3 qx = 2 * gx / (width - 1) * camRight;
+    vec3 qy = 2 * gy / (height - 1) * UP;
+    vec3 p1m = camForward - gx * camRight - gy * UP;
+
+    vec3 direction = p1m + qx * pixelCoords.x + qy * pixelCoords.y;
+
+    return Ray(camPosition, direction);
+}
+
+RaycastHit raySphereIntersect(Ray ray, Sphere sphere) {
+    RaycastHit hit;
+    hit.hit = false;
+
+    vec3 positionDelta = sphere.position - ray.origin;
+
+    float a = dot(ray.direction, ray.direction);
+    float b = -2.0f * dot(positionDelta, ray.direction);
+    float c = dot(positionDelta, positionDelta) - sphere.radius * sphere.radius;
+
+    float determinant = b * b - 4.0f * a * c;
+
+    float x1, x2;
+    if (determinant < 0) {
+        return hit; // not hit
+    } else {
+        x1 = (-b - sqrt(determinant)) / (2.0f * a);
+        x2 = (-b + sqrt(determinant)) / (2.0f * a);
+    }
+
+    if(x1 > MIN_HIT_DISTANCE) {
+        hit.distance = x1;
+    } else if(x2 > MIN_HIT_DISTANCE) {
+        hit.distance = x2;
+    } else {
+        return hit; // not hit
+    }
+
+    hit.hit = true;
+    hit.position = ray.origin + ray.direction * hit.distance;
+    hit.normal = normalize(hit.position - sphere.position);
+
+    return hit;
+}
+
+vec3 shadowRay(RaycastHit hit) {
+    Ray shadowRay = Ray(hit.position, inverseLightDirection);
+
+    for (int s = 0; s < NUM_SPHERES; s++) {
+        RaycastHit shadowHit = raySphereIntersect(shadowRay, spheres[s]);
+        if (shadowHit.hit) {
+            return vec3(0.0);
+        }
+    }
+
+    float intensity = dot(shadowRay.direction, hit.normal);
+    return vec3(intensity);
+}
+
+vec3 raycast(Ray ray) {
+    vec3 lightColor = vec3(0.0);
+    Ray rays[MAX_REFLECTIONS + 1];
+    RaycastHit hits[MAX_REFLECTIONS];
+    vec3 hitColors[MAX_REFLECTIONS];
+    rays[0] = ray;
+
+    for (int i = 0; i < MAX_REFLECTIONS; i++) { 
+        hits[i].hit = false;
+        hits[i].distance = FLOAT_MAX;
+        rays[i+1] = rays[i]; // make sure we get no junk values when we don't hit
+        for (int s = 0; s < NUM_SPHERES; s++) {
+            RaycastHit hit = raySphereIntersect(rays[i], spheres[s]);
+            if (hit.hit && hit.distance < hits[i].distance) {
+                hits[i] = hit;
+                hitColors[i] = spheres[s].color;
+                rays[i+1].origin = hit.position;
+                rays[i+1].direction = reflect(rays[i].direction, hit.normal);
+            }
+        }
+    }
+
+    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
+        if (hits[i].hit) {
+            float reflectionIntensity = dot(-rays[i].direction, hits[i].normal);
+            lightColor *= reflectionIntensity;
+            lightColor += ambientLight;
+            lightColor += shadowRay(hits[i]);
+            lightColor *= hitColors[i];
+            lightColor = clamp(lightColor, 0.0, 1.0);
+        }
+    }
+
+    return lightColor;
+}
+
+void main() {
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+
+    Ray ray = getCameraRay(pixelCoords);
+    vec4 color = vec4(raycast(ray), 1.0);
+
+    imageStore(outputImage, pixelCoords, color);
+}

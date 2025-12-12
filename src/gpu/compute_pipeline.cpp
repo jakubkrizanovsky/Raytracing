@@ -4,10 +4,6 @@
 
 namespace rte {
 
-constexpr VkDeviceSize INPUT_BUFFER_SIZE = 2048; //TODO - should probably not be fixed size
-const char* SHADER_PATH = "shaders/test_shader.comp.spv"; //TODO - move somewhere else?
-
-
 ComputePipeline::ComputePipeline(std::shared_ptr<Device> device) : device{device} {
     createBuffers();
     createDescriptorSetLayout();
