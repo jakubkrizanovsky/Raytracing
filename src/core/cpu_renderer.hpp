@@ -9,7 +9,7 @@ public:
     CpuRenderer(std::shared_ptr<Device> device) : Renderer{device} {}
     ~CpuRenderer() override;
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image) override;
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex) override;
     void setExtent(VkExtent2D extent) override;
 protected:
     void* stagingData = nullptr;

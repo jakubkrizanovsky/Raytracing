@@ -63,18 +63,23 @@ void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
 
     VkMemoryRequirements memoryRequirements;
     vkGetBufferMemoryRequirements(device, buffer, &memoryRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memoryRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate buffer memory!");
-    }
+    allocateMemory(memoryRequirements, properties, bufferMemory);
 
     if (vkBindBufferMemory(device, buffer, bufferMemory, 0) != VK_SUCCESS) {
         throw std::runtime_error("Failed to bind buffer memory!");
+    }
+}
+
+void Device::allocateMemory(VkMemoryRequirements requrements, VkMemoryPropertyFlags properties, 
+        VkDeviceMemory& memory) 
+{
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = requrements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(requrements.memoryTypeBits, properties);
+
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate memory!");
     }
 }
 

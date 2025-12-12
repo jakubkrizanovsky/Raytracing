@@ -14,7 +14,6 @@ App::App(RunType runType) {
     device = std::make_shared<Device>(window);
     renderer = createRenderer(runType);
     swapchain = std::make_unique<Swapchain>(window, device, renderer);
-    computePipeline = std::make_unique<ComputePipeline>(device);
 }
 
 void App::run() {

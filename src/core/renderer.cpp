@@ -2,7 +2,7 @@
 
 namespace rte {
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image) {
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex) {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;

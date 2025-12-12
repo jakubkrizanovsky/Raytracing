@@ -4,14 +4,15 @@
 
 namespace rte {
 
-constexpr VkDeviceSize INPUT_BUFFER_SIZE = 2048; //TODO ?
-constexpr char* SHADER_PATH = "shaders/test_shader.comp.spv"; //TODO - move somewhere else?
+constexpr VkDeviceSize INPUT_BUFFER_SIZE = 2048; //TODO - should probably not be fixed size
+const char* SHADER_PATH = "shaders/test_shader.comp.spv"; //TODO - move somewhere else?
 
 
 ComputePipeline::ComputePipeline(std::shared_ptr<Device> device) : device{device} {
     createBuffers();
-    createDescriptorSets();
-    connectDescriptorSets();
+    createDescriptorSetLayout();
+    createDescriptorPool();
+    createDescriptorSet();
     createShaderModule();
     createPipeline();
 }
@@ -27,20 +28,43 @@ ComputePipeline::~ComputePipeline() {
     vkFreeMemory(device->getDevice(), inputBufferMemory, nullptr);
 }
 
+void ComputePipeline::connectDescriptorSets(VkImageView imageView) {
+    VkDescriptorBufferInfo inputDescriptorBufferInfo{};
+    inputDescriptorBufferInfo.buffer = inputBuffer;
+    inputDescriptorBufferInfo.offset = 0;
+    inputDescriptorBufferInfo.range = VK_WHOLE_SIZE;
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageView = imageView;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkWriteDescriptorSet writeDescriptorSet[] = {
+        {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, /*dstBinding=*/0, 
+                /*dstArrayElement=*/0, /*descriptorCount=*/1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+                /*pImageInfo=*/nullptr, /*pBufferInfo=*/&inputDescriptorBufferInfo, /*pTexelBufferView=*/nullptr},
+        {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, /*dstBinding=*/1, 
+                /*dstArrayElement=*/0, /*descriptorCount=*/1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 
+                /*pImageInfo=*/&imageInfo, /*pBufferInfo=*/nullptr, /*pTexelBufferView=*/nullptr}
+    };
+
+    vkUpdateDescriptorSets(device->getDevice(), 2, writeDescriptorSet, 0, nullptr);
+}
+
 void ComputePipeline::createBuffers() {
     device->createBuffer(INPUT_BUFFER_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             inputBuffer, inputBufferMemory);
 }
 
-void ComputePipeline::createDescriptorSets() {
+void ComputePipeline::createDescriptorSetLayout() {
     VkDescriptorSetLayoutBinding bindings[] = {
-        {/*binding=*/0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, /*descriptorCount=*/1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
+        {/*binding=*/0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, /*descriptorCount=*/1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},
+        {/*binding=*/1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, /*descriptorCount=*/1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}
     };
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{};
     descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorSetLayoutCreateInfo.bindingCount = 1;
+    descriptorSetLayoutCreateInfo.bindingCount = 2;
     descriptorSetLayoutCreateInfo.pBindings = bindings;
 
     if (vkCreateDescriptorSetLayout(device->getDevice(), &descriptorSetLayoutCreateInfo, nullptr, 
@@ -48,9 +72,12 @@ void ComputePipeline::createDescriptorSets() {
     {
         throw std::runtime_error("Failed to create descriptor set layout!");
     }
+}
 
+void ComputePipeline::createDescriptorPool() {
     VkDescriptorPoolSize descriptorPoolSize[] = {
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}
     };
 
     VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
@@ -58,13 +85,16 @@ void ComputePipeline::createDescriptorSets() {
     descriptorPoolCreateInfo.maxSets = 1;
     descriptorPoolCreateInfo.poolSizeCount = 2;
     descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize;
+    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //TODO - ??
 
     if (vkCreateDescriptorPool(device->getDevice(), &descriptorPoolCreateInfo, nullptr, 
             &descriptorPool) != VK_SUCCESS) 
     {
         throw std::runtime_error("Failed to create descriptor pool!");
     }
+}
 
+void ComputePipeline::createDescriptorSet() {
     VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
     descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocateInfo.descriptorPool = descriptorPool;
@@ -74,22 +104,6 @@ void ComputePipeline::createDescriptorSets() {
     if (vkAllocateDescriptorSets(device->getDevice(), &descriptorSetAllocateInfo, &descriptorSet) != VK_SUCCESS) {
         throw std::runtime_error("Failed to allocate descriptor sets!");
     }
-}
-
-void ComputePipeline::connectDescriptorSets() {
-    VkDescriptorBufferInfo inputDescriptorBufferInfo{};
-
-    inputDescriptorBufferInfo.buffer = inputBuffer;
-    inputDescriptorBufferInfo.offset = 0;
-    inputDescriptorBufferInfo.range = VK_WHOLE_SIZE;
-
-    VkWriteDescriptorSet write_desc_set[] = {
-        { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, /*dstBinding=*/0, 
-                /*dstArrayElement=*/0, /*descriptorCount=*/1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-                nullptr, &inputDescriptorBufferInfo, nullptr }
-    };
-
-    vkUpdateDescriptorSets(device->getDevice(), 1, write_desc_set, 0, nullptr);
 }
 
 void ComputePipeline::createShaderModule() {

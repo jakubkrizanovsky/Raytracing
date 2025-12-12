@@ -31,6 +31,8 @@ public:
             std::vector<VkPresentModeKHR>& presentModes);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
             VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+    void allocateMemory(VkMemoryRequirements requrements, VkMemoryPropertyFlags properties, 
+            VkDeviceMemory& memory);
     
     VkDevice getDevice() {return device;}
     VkQueue getComputeQueue() {return computeQueue;}

@@ -18,7 +18,7 @@ public:
     Renderer &operator=(Renderer &&) = delete;
 
     virtual void prepareFrame() = 0;
-    virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image);
+    virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex);
     virtual void setExtent(VkExtent2D newExtent) {extent = newExtent;}
 protected:
     std::shared_ptr<Device> device;

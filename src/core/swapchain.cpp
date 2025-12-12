@@ -165,7 +165,7 @@ void Swapchain::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imag
         throw std::runtime_error("Failed to begin recording command buffer!");
     }
 
-    renderer->recordCommandBuffer(commandBuffer, images[imageIndex]);
+    renderer->recordCommandBuffer(commandBuffer, images[imageIndex], imageIndex);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to record command buffer!");

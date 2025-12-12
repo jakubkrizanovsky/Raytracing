@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device.hpp"
+#include <core/device.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -16,6 +16,12 @@ public:
     void operator=(const ComputePipeline &) = delete;
     ComputePipeline(ComputePipeline &&) = delete;
     ComputePipeline &operator=(ComputePipeline &&) = delete;
+
+    void connectDescriptorSets(VkImageView imageView);
+    
+    VkDescriptorSet getDescriptorSet(uint32_t index) {return descriptorSet;}
+    VkPipelineLayout getPipelineLayout() {return pipelineLayout;}
+    VkPipeline getPipeline() {return pipeline;}
 private:
     std::shared_ptr<Device> device;
     VkBuffer inputBuffer = VK_NULL_HANDLE;
@@ -28,8 +34,9 @@ private:
     VkPipeline pipeline = VK_NULL_HANDLE;
 
     void createBuffers();
-    void createDescriptorSets();
-    void connectDescriptorSets();
+    void createDescriptorSetLayout();
+    void createDescriptorPool();
+    void createDescriptorSet();
     void createShaderModule();
     void createPipeline();
 };
