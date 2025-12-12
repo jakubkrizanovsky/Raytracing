@@ -4,17 +4,12 @@
 
 namespace rte {
 
-GPURenderer::GPURenderer(std::shared_ptr<Device> device) : Renderer(device), computePipeline(device) {
-    createImage();
-    createImageView();
-
-    computePipeline.connectDescriptorSets(imageView);
+GPURenderer::GPURenderer(std::shared_ptr<Device> device) : Renderer(device) {
+    computePipeline = std::make_unique<ComputePipeline>(device);
 }
 
 GPURenderer::~GPURenderer() {
-    vkDestroyImageView(device->getDevice(), imageView, nullptr);
-    vkDestroyImage(device->getDevice(), image, nullptr);
-    vkFreeMemory(device->getDevice(), imageMemory, nullptr);
+    cleanUpImageAndView();
 }
 
 void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swapchainImage, uint32_t imageIndex) {
@@ -39,10 +34,10 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
         1, &barrier
     );
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getPipeline());
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipeline());
 
-    VkDescriptorSet descriptorSet = computePipeline.getDescriptorSet(imageIndex);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline.getPipelineLayout(),
+    VkDescriptorSet descriptorSet = computePipeline->getDescriptorSet(imageIndex);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipelineLayout(),
             0, 1, &descriptorSet, 0, nullptr);
 
     glm::uvec2 groupCounts = calculateGroupCounts();
@@ -93,12 +88,23 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
     );
 }
 
+void GPURenderer::setExtent(VkExtent2D extent) {
+    Renderer::setExtent(extent);
+
+    cleanUpImageAndView();
+
+    createImage();
+    createImageView();
+
+    computePipeline->connectDescriptorSets(imageView);
+}
+
 void GPURenderer::createImage() {
     VkImageCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.extent.width = 2 * Window::width; //TODO - refactor this to use actual extent
-    createInfo.extent.height = 2 * Window::height; //TODO
+    createInfo.extent.width = extent.width;
+    createInfo.extent.height = extent.height;
     createInfo.extent.depth = 1;
     createInfo.mipLevels = 1;
     createInfo.arrayLayers = 1;
@@ -138,6 +144,17 @@ void GPURenderer::createImageView() {
 
     if (vkCreateImageView(device->getDevice(), &createInfo, nullptr, &imageView) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create image view!");
+    }
+}
+
+void GPURenderer::cleanUpImageAndView() {
+    if (imageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device->getDevice(), imageView, nullptr);
+    }
+    
+    if (image != VK_NULL_HANDLE) {
+        vkDestroyImage(device->getDevice(), image, nullptr);
+        vkFreeMemory(device->getDevice(), imageMemory, nullptr);
     }
 }
 

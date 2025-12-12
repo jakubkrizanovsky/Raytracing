@@ -85,7 +85,7 @@ void ComputePipeline::createDescriptorPool() {
     descriptorPoolCreateInfo.maxSets = 1;
     descriptorPoolCreateInfo.poolSizeCount = 2;
     descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSize;
-    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; //TODO - ??
+    descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     if (vkCreateDescriptorPool(device->getDevice(), &descriptorPoolCreateInfo, nullptr, 
             &descriptorPool) != VK_SUCCESS) 
@@ -145,7 +145,6 @@ void ComputePipeline::createPipeline() {
 
     VkComputePipelineCreateInfo computePipelineCreateInfo{};
     computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-
     computePipelineCreateInfo.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     computePipelineCreateInfo.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     computePipelineCreateInfo.stage.module = shaderModule;
