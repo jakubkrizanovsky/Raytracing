@@ -1,5 +1,6 @@
 #include "gpu_renderer.hpp"
 #include "gpu_sphere.hpp"
+#include "push_constants.hpp"
 
 #include <iostream>
 
@@ -57,6 +58,19 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
     VkDescriptorSet descriptorSet = computePipeline->getDescriptorSet(imageIndex);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipelineLayout(),
             0, 1, &descriptorSet, 0, nullptr);
+
+    PushConstants pushConstants{};
+    pushConstants.cameraPosition = cameraData.position;
+    pushConstants.cameraForward = cameraData.forward;
+    pushConstants.cameraFOV = glm::radians(cameraData.fov);
+    pushConstants.inverseLightDirection = inverseLightDirection;
+    pushConstants.ambientLight = ambientLight;
+    pushConstants.sphereCount = static_cast<uint32_t>(spheres.size());
+    pushConstants.width = extent.width;
+    pushConstants.height = extent.height;
+
+    vkCmdPushConstants(commandBuffer, computePipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, 
+            sizeof(PushConstants), &pushConstants);
 
     glm::uvec2 groupCounts = calculateGroupCounts();
     vkCmdDispatch(commandBuffer, groupCounts.x, groupCounts.y, 1);

@@ -1,4 +1,5 @@
 #include "compute_pipeline.hpp"
+#include "push_constants.hpp"
 
 #include <fstream>
 
@@ -119,10 +120,17 @@ void ComputePipeline::createShaderModule() {
 }
 
 void ComputePipeline::createPipeline() {
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(PushConstants);
+
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.setLayoutCount = 1;
     pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(device->getDevice(), &pipelineLayoutCreateInfo, nullptr, 
             &pipelineLayout) != VK_SUCCESS) 

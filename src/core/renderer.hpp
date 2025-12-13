@@ -2,6 +2,7 @@
 
 #include "device.hpp"
 #include "sphere.hpp"
+#include "camera_data.hpp"
 
 #include <vulkan/vulkan.h>
 
@@ -25,6 +26,9 @@ protected:
     std::shared_ptr<Device> device;
     VkExtent2D extent;
 
+    static constexpr CameraData cameraData = {{0, 0, -5}, {0, 0, 1}, 90.0f};
+    static constexpr glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
+    const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
     std::vector<Sphere> spheres = {
         {                   // first sphere 
             {0, 0, 0},      // in origin

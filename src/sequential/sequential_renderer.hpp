@@ -20,10 +20,7 @@ private:
     glm::vec3 shadowRay(RaycastHit hit);
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit);
 
-    SequentialCamera camera = SequentialCamera({{0, 0, -5}, {0, 0, 1}, 90.0f});
-
-    const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
-    const glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
+    SequentialCamera camera = SequentialCamera(cameraData);
 };
 
 } // namespace rte
