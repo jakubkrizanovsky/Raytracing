@@ -1,5 +1,7 @@
 include .env
 
+ARGS = --gpu
+
 TARGET = a.out
 SRC_DIR = ./src
 OBJ_DIR = ./obj
@@ -29,15 +31,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 run: $(TARGET)
 	./$(TARGET) $(ARGS)
-
-run-sequential: $(TARGET)
-	./$(TARGET) --sequential
-
-run-simd: $(TARGET)
-	./$(TARGET) --simd
-
-run-gpu: $(TARGET)
-	./$(TARGET) --gpu
 
 clean:
 	rm -f $(TARGET)

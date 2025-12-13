@@ -1,7 +1,6 @@
 #pragma once
 
 #include <core/cpu_renderer.hpp>
-#include <core/sphere.hpp>
 #include "vec3_field.hpp"
 #include "ray_field.hpp"
 #include "rayx4.hpp"
@@ -28,23 +27,6 @@ private:
 
     const Vec3x4 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
     const Vec3x4 ambientLight = {0.1f};
-    std::vector<Sphere> spheres = {
-        {                   // first sphere 
-            {0, 0, 0},      // in origin
-            1,              // radius 1
-            {0, 1, 1}       // cyan color
-        },
-        {                   // second sphere 
-            {1, 0.5f, 1},   // slightly moved
-            0.5f,           // half the size
-            {1, 0.1f, 0.1f} // red color
-        },
-        {                   // third sphere 
-            {-1, 0.5f, -1}, // slightly moved
-            0.5f,           // half the size
-            {0.1f, 1, 0.1f} // green color
-        }
-    };
 };
 
 } // namespace rte

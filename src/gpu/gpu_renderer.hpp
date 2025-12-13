@@ -15,15 +15,19 @@ public:
     GPURenderer(std::shared_ptr<Device> device);
     ~GPURenderer();
 
-    void prepareFrame() override {} //do nothing
+    void prepareFrame() override;
     void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex) override;
     void setExtent(VkExtent2D extent) override;
 private:
-    std::unique_ptr<ComputePipeline> computePipeline;
+    VkBuffer inputBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory inputBufferMemory = VK_NULL_HANDLE;
+    void* inputData = nullptr;
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory imageMemory = VK_NULL_HANDLE;
     VkImageView imageView = VK_NULL_HANDLE;
+    std::unique_ptr<ComputePipeline> computePipeline;
 
+    void createBuffers();
     void createImage();
     void createImageView();
     void cleanUpImageAndView();

@@ -5,7 +5,6 @@
 namespace rte {
 
 ComputePipeline::ComputePipeline(std::shared_ptr<Device> device) : device{device} {
-    createBuffers();
     createDescriptorSetLayout();
     createDescriptorPool();
     createDescriptorSet();
@@ -20,11 +19,9 @@ ComputePipeline::~ComputePipeline() {
     vkFreeDescriptorSets(device->getDevice(), descriptorPool, 1, &descriptorSet);
     vkDestroyDescriptorPool(device->getDevice(), descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device->getDevice(), descriptorSetLayout, nullptr);
-    vkDestroyBuffer(device->getDevice(), inputBuffer, nullptr);
-    vkFreeMemory(device->getDevice(), inputBufferMemory, nullptr);
 }
 
-void ComputePipeline::connectDescriptorSets(VkImageView imageView) {
+void ComputePipeline::connectDescriptorSets(VkImageView imageView, VkBuffer inputBuffer) {
     VkDescriptorBufferInfo inputDescriptorBufferInfo{};
     inputDescriptorBufferInfo.buffer = inputBuffer;
     inputDescriptorBufferInfo.offset = 0;
@@ -44,12 +41,6 @@ void ComputePipeline::connectDescriptorSets(VkImageView imageView) {
     };
 
     vkUpdateDescriptorSets(device->getDevice(), 2, writeDescriptorSet, 0, nullptr);
-}
-
-void ComputePipeline::createBuffers() {
-    device->createBuffer(INPUT_BUFFER_SIZE, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            inputBuffer, inputBufferMemory);
 }
 
 void ComputePipeline::createDescriptorSetLayout() {

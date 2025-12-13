@@ -9,7 +9,6 @@ namespace rte {
 class ComputePipeline {
 public:
     static constexpr std::string_view SHADER_PATH = "shaders/raytracer.comp.spv";
-    static constexpr VkDeviceSize INPUT_BUFFER_SIZE = 2048; //TODO - should probably not be fixed size
 
     ComputePipeline(std::shared_ptr<Device> device);
     ~ComputePipeline();
@@ -20,15 +19,13 @@ public:
     ComputePipeline(ComputePipeline &&) = delete;
     ComputePipeline &operator=(ComputePipeline &&) = delete;
 
-    void connectDescriptorSets(VkImageView imageView);
+    void connectDescriptorSets(VkImageView imageView, VkBuffer buffer);
     
     VkDescriptorSet getDescriptorSet(uint32_t index) {return descriptorSet;}
     VkPipelineLayout getPipelineLayout() {return pipelineLayout;}
     VkPipeline getPipeline() {return pipeline;}
 private:
     std::shared_ptr<Device> device;
-    VkBuffer inputBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory inputBufferMemory = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -36,7 +33,6 @@ private:
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline pipeline = VK_NULL_HANDLE;
 
-    void createBuffers();
     void createDescriptorSetLayout();
     void createDescriptorPool();
     void createDescriptorSet();

@@ -1,4 +1,5 @@
 #include "gpu_renderer.hpp"
+#include "gpu_sphere.hpp"
 
 #include <iostream>
 
@@ -6,10 +7,27 @@ namespace rte {
 
 GPURenderer::GPURenderer(std::shared_ptr<Device> device) : Renderer(device) {
     computePipeline = std::make_unique<ComputePipeline>(device);
+    createBuffers();
 }
 
 GPURenderer::~GPURenderer() {
+    vkUnmapMemory(device->getDevice(), inputBufferMemory);
+    vkDestroyBuffer(device->getDevice(), inputBuffer, nullptr);
+    vkFreeMemory(device->getDevice(), inputBufferMemory, nullptr);
     cleanUpImageAndView();
+}
+
+void GPURenderer::prepareFrame() {
+    size_t dataSize = sizeof(GPUSphere) * spheres.size();
+
+    // convert spheres to padded gpu variants
+    std::vector<GPUSphere> gpuSpheres;
+    gpuSpheres.reserve(spheres.size());
+    for (const Sphere& sphere : spheres) {
+        gpuSpheres.emplace_back(sphere);
+    }
+    
+    memcpy(inputData, gpuSpheres.data(), dataSize);
 }
 
 void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swapchainImage, uint32_t imageIndex) {
@@ -96,7 +114,17 @@ void GPURenderer::setExtent(VkExtent2D extent) {
     createImage();
     createImageView();
 
-    computePipeline->connectDescriptorSets(imageView);
+    computePipeline->connectDescriptorSets(imageView, inputBuffer);
+}
+
+void GPURenderer::createBuffers() {
+    VkDeviceSize dataSize = sizeof(GPUSphere) * spheres.size();
+
+    device->createBuffer(dataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            inputBuffer, inputBufferMemory);
+
+    vkMapMemory(device->getDevice(), inputBufferMemory, 0, dataSize, 0, &inputData);
 }
 
 void GPURenderer::createImage() {

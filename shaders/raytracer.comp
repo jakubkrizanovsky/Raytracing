@@ -1,15 +1,23 @@
 #version 450
 
-// This defines the local workgroup size: 16 threads in X, 1 in Y and Z
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(set=0, binding=0) readonly buffer Input {
-    uint input_data[];
+struct Sphere {
+    vec3 position;
+    float radius;
+    vec3 color;
+};
+
+layout(std140, binding=0) readonly buffer SpheresIn {
+    Sphere spheres[];
 };
 
 layout(binding = 1, rgba8) uniform image2D outputImage;
 
+#define FLT_MAX 3.402823466e+38
+
 //TODO - pass these as cam params instead of consts
+const int sphere_count = 3;
 const vec3 camPosition = vec3(0.0, 0.0, -5.0);
 const vec3 camForward = vec3(0.0, 0.0, 1.0);
 const float camFov = 1.570796; // pi/2
@@ -23,12 +31,6 @@ struct Ray {
     vec3 direction;
 };
 
-struct Sphere {
-    vec3 position;
-    float radius;
-    vec3 color;
-};
-
 struct RaycastHit {
     bool hit;
     float distance;
@@ -39,14 +41,7 @@ struct RaycastHit {
 const vec3 UP = vec3(0.0, 1.0, 0.0);
 const int MAX_REFLECTIONS = 5;
 const float MIN_HIT_DISTANCE = 0.001f;
-const float FLOAT_MAX = 3.402823466e+38;
 
-const int NUM_SPHERES = 3;
-Sphere spheres[NUM_SPHERES] = Sphere[NUM_SPHERES](
-    Sphere(vec3(0.0, 0.0, 0.0), 1.0, vec3(0.0, 1.0, 1.0)),      // cyan
-    Sphere(vec3(1.0, 0.5, 1.0), 0.5, vec3(1.0, 0.1, 0.1)),      // red
-    Sphere(vec3(-1.0, 0.5, -1.0), 0.5, vec3(0.1, 1.0, 0.1))     // green
-);
 
 Ray getCameraRay(ivec2 pixelCoords) {
     vec3 camRight = cross(camForward, UP);
@@ -99,7 +94,7 @@ RaycastHit raySphereIntersect(Ray ray, Sphere sphere) {
 vec3 shadowRay(RaycastHit hit) {
     Ray shadowRay = Ray(hit.position, inverseLightDirection);
 
-    for (int s = 0; s < NUM_SPHERES; s++) {
+    for (int s = 0; s < sphere_count; s++) {
         RaycastHit shadowHit = raySphereIntersect(shadowRay, spheres[s]);
         if (shadowHit.hit) {
             return vec3(0.0);
@@ -119,9 +114,9 @@ vec3 raycast(Ray ray) {
 
     for (int i = 0; i < MAX_REFLECTIONS; i++) { 
         hits[i].hit = false;
-        hits[i].distance = FLOAT_MAX;
+        hits[i].distance = FLT_MAX;
         rays[i+1] = rays[i]; // make sure we get no junk values when we don't hit
-        for (int s = 0; s < NUM_SPHERES; s++) {
+        for (int s = 0; s < sphere_count; s++) {
             RaycastHit hit = raySphereIntersect(rays[i], spheres[s]);
             if (hit.hit && hit.distance < hits[i].distance) {
                 hits[i] = hit;
