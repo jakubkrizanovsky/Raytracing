@@ -1,3 +1,5 @@
+#ifdef __ARM_NEON__
+
 #include "vec3x4.hpp"
 
 namespace rte {
@@ -20,3 +22,5 @@ Vec3x4 Vec3x4::normalized() const {
 }
 
 }
+
+#endif // __ARM_NEON__

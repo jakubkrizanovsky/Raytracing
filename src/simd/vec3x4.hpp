@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __ARM_NEON__
 
 #include <arm_neon.h>
 #include <glm/glm.hpp>
@@ -117,3 +118,5 @@ inline Vec3x4 operator*(float scalar, const Vec3x4& vec) {
 }
 
 } // namespace rte
+
+#endif // __ARM_NEON__

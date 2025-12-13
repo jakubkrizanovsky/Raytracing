@@ -1,5 +1,6 @@
-#include "simd_renderer.hpp"
+#ifdef __ARM_NEON__
 
+#include "simd_renderer.hpp"
 #include "vec3_field.hpp"
 #include "vec3x4.hpp"
 #include "rayx4.hpp"
@@ -208,3 +209,5 @@ Vec3x4 SIMDRenderer::reflect(Vec3x4 rayDirection, Vec3x4 normal) {
 }
 
 } // namespace rte
+
+#endif // __ARM_NEON__

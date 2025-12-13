@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __ARM_NEON__
 
 #include "vec3x4.hpp"
 
@@ -12,3 +13,5 @@ struct Rayx4 {
 };
 
 } // namespace rte
+
+#endif // __ARM_NEON__

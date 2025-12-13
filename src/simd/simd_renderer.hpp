@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __ARM_NEON__
 
 #include <core/cpu_renderer.hpp>
 #include "vec3_field.hpp"
@@ -30,3 +31,5 @@ private:
 };
 
 } // namespace rte
+
+#endif // __ARM_NEON__

@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __ARM_NEON__
 
 #include <arm_neon.h>
 
@@ -14,3 +15,5 @@ struct Vec3Field {
 };
 
 } // namespace rte
+
+#endif // __ARM_NEON__

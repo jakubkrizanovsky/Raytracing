@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __ARM_NEON__
 
 #include "vec3_field.hpp"
 
@@ -10,3 +11,5 @@ struct RayField {
 };
 
 } // namespace rte
+
+#endif // __ARM_NEON__

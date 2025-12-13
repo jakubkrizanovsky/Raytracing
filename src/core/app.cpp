@@ -31,7 +31,11 @@ std::shared_ptr<Renderer> App::createRenderer(RunType runType) {
         case RunType::SEQUENTIAL:
             return std::make_shared<SequentialRenderer>(device);
         case RunType::SIMD:
+#ifdef __ARM_NEON__
             return std::make_shared<SIMDRenderer>(device);
+#else
+            throw std::runtime_error("SIMD run type not available on this platform - Arm Neon required!");
+#endif
         case RunType::GPU:
             return std::make_shared<GPURenderer>(device);
     }
