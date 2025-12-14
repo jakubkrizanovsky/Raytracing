@@ -4,7 +4,7 @@
 #include "device.hpp"
 #include "swapchain.hpp"
 #include "renderer.hpp"
-#include "run_type.hpp"
+#include "run_params.hpp"
 #include <scene/scene.hpp>
 
 // std
@@ -14,9 +14,10 @@ namespace rte {
 
 class App {
 public:
-    App(RunType runType);
+    App(RunParams runParams);
     void run();
 private:
+    RunParams runParams;
     std::shared_ptr<Window> window;
     std::shared_ptr<Device> device;
     std::shared_ptr<Renderer> renderer;

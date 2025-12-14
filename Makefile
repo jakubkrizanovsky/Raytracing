@@ -1,6 +1,6 @@
 include .env
 
-ARGS = --gpu
+ARGS = --gpu scenes/default.json
 
 TARGET = a.out
 SRC_DIR = ./src

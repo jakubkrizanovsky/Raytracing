@@ -12,15 +12,15 @@
 
 namespace rte {
 
-App::App(RunType runType) {
+App::App(RunParams runParams) : runParams{runParams} {
     window = std::make_shared<Window>();
     device = std::make_shared<Device>(window);
-    renderer = createRenderer(runType);
+    renderer = createRenderer(runParams.runType);
     swapchain = std::make_unique<Swapchain>(window, device, renderer);
 }
 
 void App::run() {
-    std::shared_ptr<Scene> scene = loadScene("scenes/default.json");
+    std::shared_ptr<Scene> scene = loadScene(runParams.scenePath);
     renderer->setScene(scene);
 
     while (!window->shouldClose()) {

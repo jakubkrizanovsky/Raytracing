@@ -1,5 +1,7 @@
 #include <core/app.hpp>
-#include <core/run_type.hpp>
+#include <core/run_params.hpp>
+
+using namespace rte;
 
 // std
 #include <cstdlib>
@@ -8,28 +10,37 @@
 #include <map>
 
 
-rte::RunType parseArgs(int argc, char* argv[]) {
-    if (argc != 2) {
-        throw std::invalid_argument("Invalid number of argumets - should be 2!");
+RunParams parseArgs(int argc, char* argv[]) {
+    if (argc < 2 || argc > 3) {
+        throw std::invalid_argument("Invalid number of argumets - should be 2 or 3!");
     }
 
-    static const std::map<std::string, rte::RunType> flagMap = {
-        {"--sequential", rte::RunType::SEQUENTIAL},
-        {"--simd", rte::RunType::SIMD},
-        {"--gpu", rte::RunType::GPU}
+    static const std::map<std::string, RunType> flagMap = {
+        {"--sequential", RunType::SEQUENTIAL},
+        {"--simd", RunType::SIMD},
+        {"--gpu", RunType::GPU}
     };
 
+    RunParams runParams;
     try {
-        return flagMap.at(argv[1]);
+        runParams.runType = flagMap.at(argv[1]);
     } catch (const std::out_of_range& e) {
         throw std::invalid_argument("Invalid run type: " + std::string(argv[1]));
     }
+
+    if (argc == 3) {
+        runParams.scenePath = argv[2];
+    } else {
+        runParams.scenePath = "scenes/default.json";
+    }
+
+    return runParams;
 }
 
 int main(int argc, char* argv[]) {
     try {
-        rte::RunType runType = parseArgs(argc, argv);
-        rte::App app(runType);
+        RunParams runParams = parseArgs(argc, argv);
+        App app(runParams);
 
         app.run();
     } catch (const std::exception &e) {
