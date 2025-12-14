@@ -94,7 +94,7 @@ Vec3Field SIMDRenderer::raycast(RayField sceneRays) {
             bool hasHit = false;
             RaycastHitx4 hit{};
 
-            for (Sphere& sphere : spheres) {
+            for (Sphere& sphere : scene->spheres) {
                 uint32x4_t hitMask = raySphereIntersect(rays[i], sphere, &hit);
                 uint32x4_t closerMask = vcltq_f32(hit.distance, hits[i].distance);
                 uint32x4_t mask = vandq_u32(hitMask, closerMask);
@@ -150,7 +150,7 @@ Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
     Rayx4 shadowRay = {hit.position, inverseLightDirection};
 
     uint32x4_t mask = vdupq_n_u32(0);
-    for (Sphere& sphere : spheres) {
+    for (Sphere& sphere : scene->spheres) {
         RaycastHitx4 shadowHit;
         uint32x4_t hitMask = raySphereIntersect(shadowRay, sphere, &shadowHit);
         mask = vorrq_u32(mask, hitMask);

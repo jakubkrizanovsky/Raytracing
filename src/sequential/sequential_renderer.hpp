@@ -15,12 +15,13 @@ public:
     SequentialRenderer(std::shared_ptr<Device> device) : CpuRenderer{device} {}
 
     void prepareFrame() override;
+    void setScene(std::shared_ptr<Scene> newScene) override;
 private:
+    std::unique_ptr<SequentialCamera> camera = nullptr;
+
     glm::vec3 raycast(Ray& ray);
     glm::vec3 shadowRay(RaycastHit hit);
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit);
-
-    SequentialCamera camera = SequentialCamera(cameraData);
 };
 
 } // namespace rte

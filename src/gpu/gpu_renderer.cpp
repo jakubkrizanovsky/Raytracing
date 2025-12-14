@@ -8,23 +8,23 @@ namespace rte {
 
 GPURenderer::GPURenderer(std::shared_ptr<Device> device) : Renderer(device) {
     computePipeline = std::make_unique<ComputePipeline>(device);
-    createBuffers();
+    createInputBuffer();
 }
 
 GPURenderer::~GPURenderer() {
-    vkUnmapMemory(device->getDevice(), inputBufferMemory);
-    vkDestroyBuffer(device->getDevice(), inputBuffer, nullptr);
-    vkFreeMemory(device->getDevice(), inputBufferMemory, nullptr);
+    cleanupInputBuffer();
     cleanUpImageAndView();
 }
 
 void GPURenderer::prepareFrame() {
-    size_t dataSize = sizeof(GPUSphere) * spheres.size();
+    //TODO - don't do this every frame unless the scene has changed
+    size_t dataSize = calculateInputBufferSize();
 
+    // TODO - std::transform?
     // convert spheres to padded gpu variants
     std::vector<GPUSphere> gpuSpheres;
-    gpuSpheres.reserve(spheres.size());
-    for (const Sphere& sphere : spheres) {
+    gpuSpheres.reserve(scene->spheres.size());
+    for (const Sphere& sphere : scene->spheres) {
         gpuSpheres.emplace_back(sphere);
     }
     
@@ -60,12 +60,12 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
             0, 1, &descriptorSet, 0, nullptr);
 
     PushConstants pushConstants{};
-    pushConstants.cameraPosition = cameraData.position;
-    pushConstants.cameraForward = cameraData.forward;
-    pushConstants.cameraFOV = glm::radians(cameraData.fov);
+    pushConstants.cameraPosition = scene->camera.position;
+    pushConstants.cameraForward = scene->camera.forward;
+    pushConstants.cameraFOV = glm::radians(scene->camera.fov);
     pushConstants.inverseLightDirection = inverseLightDirection;
     pushConstants.ambientLight = ambientLight;
-    pushConstants.sphereCount = static_cast<uint32_t>(spheres.size());
+    pushConstants.sphereCount = static_cast<uint32_t>(scene->spheres.size());
     pushConstants.width = extent.width;
     pushConstants.height = extent.height;
 
@@ -131,14 +131,31 @@ void GPURenderer::setExtent(VkExtent2D extent) {
     computePipeline->connectDescriptorSets(imageView, inputBuffer);
 }
 
-void GPURenderer::createBuffers() {
-    VkDeviceSize dataSize = sizeof(GPUSphere) * spheres.size();
+void GPURenderer::setScene(std::shared_ptr<Scene> newScene) {
+    Renderer::setScene(newScene);
+
+    cleanupInputBuffer();
+    createInputBuffer();
+
+    computePipeline->connectDescriptorSets(imageView, inputBuffer);
+}
+
+void GPURenderer::createInputBuffer() {
+    VkDeviceSize dataSize = calculateInputBufferSize();
 
     device->createBuffer(dataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             inputBuffer, inputBufferMemory);
 
     vkMapMemory(device->getDevice(), inputBufferMemory, 0, dataSize, 0, &inputData);
+}
+
+void GPURenderer::cleanupInputBuffer() {
+    if (inputBuffer != VK_NULL_HANDLE) {
+        vkUnmapMemory(device->getDevice(), inputBufferMemory);
+        vkDestroyBuffer(device->getDevice(), inputBuffer, nullptr);
+        vkFreeMemory(device->getDevice(), inputBufferMemory, nullptr);
+    }
 }
 
 void GPURenderer::createImage() {
@@ -205,6 +222,11 @@ glm::uvec2 GPURenderer::calculateGroupCounts() {
         (extent.width  + LOCAL_SIZE_X - 1) / LOCAL_SIZE_X,
         (extent.height + LOCAL_SIZE_Y - 1) / LOCAL_SIZE_Y
     };
+}
+
+VkDeviceSize GPURenderer::calculateInputBufferSize() {
+    size_t sphereCount = scene ? scene->spheres.size() : 1;
+    return sizeof(GPUSphere) * sphereCount;
 }
 
 } // namespace rte

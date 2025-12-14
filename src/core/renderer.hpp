@@ -3,6 +3,7 @@
 #include "device.hpp"
 #include "sphere.hpp"
 #include "camera_data.hpp"
+#include <scene/scene.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -22,30 +23,16 @@ public:
     virtual void prepareFrame() = 0;
     virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex);
     virtual void setExtent(VkExtent2D newExtent) {extent = newExtent;}
+    virtual void setScene(std::shared_ptr<Scene> newScene) {scene = newScene;}
 protected:
     std::shared_ptr<Device> device;
     VkExtent2D extent;
 
-    static constexpr CameraData cameraData = {{0, 0, -5}, {0, 0, 1}, 90.0f};
+    std::shared_ptr<Scene> scene = nullptr;
+
+    //TODO - remove
     static constexpr glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
     const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
-    std::vector<Sphere> spheres = {
-        {                   // first sphere 
-            {0, 0, 0},      // in origin
-            1,              // radius 1
-            {0, 1, 1}       // cyan color
-        },
-        {                   // second sphere 
-            {1, 0.5f, 1},   // slightly moved
-            0.5f,           // half the size
-            {1, 0.1f, 0.1f} // red color
-        },
-        {                   // third sphere 
-            {-1, 0.5f, -1}, // slightly moved
-            0.5f,           // half the size
-            {0.1f, 1, 0.1f} // green color
-        }
-    };
 };
 
 } // namespace rte

@@ -12,12 +12,12 @@ constexpr uint MAX_REFLECTIONS = 5;
 constexpr float MIN_HIT_DISTANCE = 0.001f;
 
 void SequentialRenderer::prepareFrame() {
-    camera.prepareFrame(extent);
+    camera->prepareFrame(extent);
 
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);
     for (auto y = 0; y < extent.height; y++) {
         for (auto x = 0; x < extent.width; x++) {
-            Ray ray = camera.getRay(x, y);
+            Ray ray = camera->getRay(x, y);
             glm::vec3 pixelColor = raycast(ray);
             
             uint32_t pixelIndex = (x + y * extent.width) * 4;
@@ -27,6 +27,11 @@ void SequentialRenderer::prepareFrame() {
             data[pixelIndex + 3] = 255;
         }
     }
+}
+
+void SequentialRenderer::setScene(std::shared_ptr<Scene> newScene) {
+    CpuRenderer::setScene(newScene);
+    camera = std::make_unique<SequentialCamera>(scene->camera);
 }
 
 glm::vec3 SequentialRenderer::raycast(Ray &ray) {
@@ -39,7 +44,7 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
     for (auto i = 0; i < MAX_REFLECTIONS; i++) {        
         hits[i].distance = std::numeric_limits<float>::max();
         RaycastHit hit{};
-        for (Sphere& sphere : spheres) {
+        for (Sphere& sphere : scene->spheres) {
             if (raySphereIntersect(rays[i], sphere, hit) &&
                     hit.distance < hits[i].distance) 
             {
@@ -67,7 +72,7 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
 glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
     Ray shadowRay = {hit.position, inverseLightDirection};
 
-    for (Sphere& sphere : spheres) {
+    for (Sphere& sphere : scene->spheres) {
         RaycastHit shadowHit{};
         if (raySphereIntersect(shadowRay, sphere, shadowHit)) {
             return BLACK;

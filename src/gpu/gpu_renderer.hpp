@@ -18,6 +18,7 @@ public:
     void prepareFrame() override;
     void recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage image, uint32_t imageIndex) override;
     void setExtent(VkExtent2D extent) override;
+    void setScene(std::shared_ptr<Scene> newScene) override;
 private:
     VkBuffer inputBuffer = VK_NULL_HANDLE;
     VkDeviceMemory inputBufferMemory = VK_NULL_HANDLE;
@@ -27,12 +28,14 @@ private:
     VkImageView imageView = VK_NULL_HANDLE;
     std::unique_ptr<ComputePipeline> computePipeline;
 
-    void createBuffers();
+    void createInputBuffer();
+    void cleanupInputBuffer();
     void createImage();
     void createImageView();
     void cleanUpImageAndView();
 
     glm::uvec2 calculateGroupCounts();
+    VkDeviceSize calculateInputBufferSize();
 };
 
 } // namespace rte

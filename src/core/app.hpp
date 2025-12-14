@@ -5,6 +5,7 @@
 #include "swapchain.hpp"
 #include "renderer.hpp"
 #include "run_type.hpp"
+#include <scene/scene.hpp>
 
 // std
 #include <memory>
@@ -22,6 +23,7 @@ private:
     std::unique_ptr<Swapchain> swapchain;
 
     std::shared_ptr<Renderer> createRenderer(RunType runType);
+    std::shared_ptr<Scene> loadScene(const std::string& path);
 };
 
 } // namespace rte

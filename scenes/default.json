@@ -1,0 +1,24 @@
+{
+    "camera": {
+        "position": [0, 0, -5],
+        "forward": [0, 0, 1],
+        "fov": 90
+    },
+    "spheres": [
+        {
+            "position": [0, 0, 0],
+            "radius": 1,
+            "color": [0, 1, 1]
+        },
+        {
+            "position": [1, 0.5, 1],
+            "radius": 0.5,
+            "color": [1, 0.1, 0.1]
+        },
+        {
+            "position": [-1, 0.5, -1],
+            "radius": 0.5,
+            "color": [0.1, 1, 0.1]
+        }
+    ]
+}

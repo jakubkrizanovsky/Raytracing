@@ -2,10 +2,13 @@
 #include <gpu/gpu_renderer.hpp>
 #include <sequential/sequential_renderer.hpp>
 #include <simd/simd_renderer.hpp>
+#include <scene/parsing.hpp>
 
+#include <nlohmann/json.hpp>
 
 // std
 #include <iostream>
+#include <fstream>
 
 namespace rte {
 
@@ -17,6 +20,9 @@ App::App(RunType runType) {
 }
 
 void App::run() {
+    std::shared_ptr<Scene> scene = loadScene("scenes/default.json");
+    renderer->setScene(scene);
+
     while (!window->shouldClose()) {
         glfwPollEvents();
         swapchain->drawFrame();
@@ -39,6 +45,18 @@ std::shared_ptr<Renderer> App::createRenderer(RunType runType) {
         case RunType::GPU:
             return std::make_shared<GPURenderer>(device);
     }
+}
+
+std::shared_ptr<Scene> App::loadScene(const std::string &path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open scene file");
+    }
+
+    nlohmann::json j;
+    file >> j;
+
+    return std::make_shared<Scene>(j.get<Scene>());
 }
 
 } // namespace rte

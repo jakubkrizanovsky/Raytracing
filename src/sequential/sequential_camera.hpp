@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/camera_data.hpp>
 #include "ray.hpp"
+#include <scene/camera.hpp>
 
 #include <vulkan/vulkan.h>
 
@@ -9,7 +9,7 @@ namespace rte {
 
 class SequentialCamera {
 public:
-    SequentialCamera(CameraData cameraData) : position{cameraData.position}, 
+    SequentialCamera(Camera cameraData) : position{cameraData.position}, 
             forward{cameraData.forward}, fov{cameraData.fov} {}
 
     void prepareFrame(VkExtent2D extent);
