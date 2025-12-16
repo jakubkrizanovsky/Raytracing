@@ -4,6 +4,7 @@
 #include "vec3_field.hpp"
 #include "vec3x4.hpp"
 #include "rayx4.hpp"
+#include <core/constants.hpp>
 
 // std
 #include <vector>
@@ -11,139 +12,94 @@
 
 namespace rte {
 
-constexpr glm::vec3 ZERO = {0, 0, 0};
-constexpr glm::vec3 RIGHT = {1, 0, 0};
-constexpr glm::vec3 UP = {0, 1, 0};
-constexpr glm::vec3 FORWARD = {0, 0, 1};
-constexpr glm::vec3 ONE = {1, 1, 1};
 constexpr uint MAX_REFLECTIONS = 5;
 constexpr float MIN_HIT_DISTANCE = 0.001f;
 
 void SIMDRenderer::prepareFrame() {
-    const glm::vec3 cameraPosition = {0, 0, -10};
-    const glm::vec3 cameraForward = FORWARD;
-    const float cameraSizeX = 4.0f;
-    const float cameraSizeY = 3.0f;
-
-    const glm::vec3 topLeft = cameraPosition - 0.5f * cameraSizeX * RIGHT + 0.5f * cameraSizeY * UP;
-
-    const float xDiff = cameraSizeX / extent.width;
-    const float yDiff = cameraSizeY / extent.height;
-    
-    RayField rays {};
-    for (auto y = 0; y < extent.height; y++) {
-        for (auto x = 0; x < extent.width; x++) {
-            uint32_t index = x + y * extent.width;
-            glm::vec3 pixelPosition = topLeft + x * xDiff * RIGHT - y * yDiff * UP;
-
-            rays.origins.x.push_back(pixelPosition.x);
-            rays.origins.y.push_back(pixelPosition.y);
-            rays.origins.z.push_back(pixelPosition.z);
-
-            rays.directions.x.push_back(cameraForward.x);
-            rays.directions.y.push_back(cameraForward.y);
-            rays.directions.z.push_back(cameraForward.z);
-        }
-    }
-
-    Vec3Field pixelColors = raycast(rays);
-
+    camera->prepareFrame(extent);
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);
+    for (auto y = 0; y < extent.height; y++) {
+        for (auto x = 0; x < extent.width; x+=4) {
+            uint32_t pixelIndex = x + y * extent.width;
 
-    for (uint32_t i = 0; i < extent.width * extent.height; i++) {
-        data[4 * i + 2] = static_cast<uint8_t>(pixelColors.x[i] * 255);
-        data[4 * i + 1] = static_cast<uint8_t>(pixelColors.y[i] * 255);
-        data[4 * i + 0] = static_cast<uint8_t>(pixelColors.z[i] * 255);
-        data[4 * i + 3] = 255;
+            Rayx4 ray = camera->getRay(x, y);
+            Vec3x4 pixelColor = raycast(ray);
+
+            uint8x16_t bgra = packBGRA(pixelColor);
+            vst1q_u8(&data[pixelIndex * 4], bgra);
+        }
     }
 }
 
-Vec3Field SIMDRenderer::raycast(RayField sceneRays) {
-    Vec3Field lightColors {};
-    lightColors.x.resize(sceneRays.origins.x.size());
-    lightColors.y.resize(sceneRays.origins.y.size());
-    lightColors.z.resize(sceneRays.origins.z.size());
+void SIMDRenderer::setScene(std::shared_ptr<Scene> newScene) {
+    CpuRenderer::setScene(newScene);
+    camera = std::make_unique<SIMDCamera>(scene->camera);
+}
 
-    for(auto a = 0; a < sceneRays.origins.x.size(); a += 4) {
+Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
+    Vec3x4 lightColor = BLACK;
 
-        Rayx4 rays[MAX_REFLECTIONS + 1];
-        RaycastHitx4 hits[MAX_REFLECTIONS] {};
-        Vec3x4 hitColors[MAX_REFLECTIONS] {};
+    Rayx4 rays[MAX_REFLECTIONS + 1];
+    RaycastHitx4 hits[MAX_REFLECTIONS] {};
+    Vec3x4 hitColors[MAX_REFLECTIONS] {};
 
-        float32x4_t originsX = vld1q_f32(&sceneRays.origins.x[a]);
-        float32x4_t originsY = vld1q_f32(&sceneRays.origins.y[a]);
-        float32x4_t originsZ = vld1q_f32(&sceneRays.origins.z[a]);
-        Vec3x4 origins = {originsX, originsY, originsZ};
+    rays[0] = sceneRay;
 
-        float32x4_t directionsX = vld1q_f32(&sceneRays.directions.x[a]);
-        float32x4_t directionsY = vld1q_f32(&sceneRays.directions.y[a]);
-        float32x4_t directionsZ = vld1q_f32(&sceneRays.directions.z[a]);
-        Vec3x4 directions = {directionsX, directionsY, directionsZ};
+    for (auto i = 0; i < MAX_REFLECTIONS; i++) {
 
-        rays[0] = {origins, directions};
+        hits[i].distance = vdupq_n_f32(std::numeric_limits<float>::max());
+        hits[i].mask = vdupq_n_u32(0);
 
-        const Vec3x4 white = {1.0f};
-        const Vec3x4 black = {0.0f};
-        Vec3x4 lightColor(0.0f);
+        bool hasHit = false;
+        RaycastHitx4 hit{};
 
-        for (auto i = 0; i < MAX_REFLECTIONS; i++) {
+        for (Sphere& sphere : scene->spheres) {
+            uint32x4_t hitMask = raySphereIntersect(rays[i], sphere, &hit);
+            uint32x4_t closerMask = vcltq_f32(hit.distance, hits[i].distance);
+            uint32x4_t mask = vandq_u32(hitMask, closerMask);
 
-            hits[i].distance = vdupq_n_f32(std::numeric_limits<float>::max());
-            hits[i].mask = vdupq_n_u32(0);
+            // select hit values based on mask
+            hits[i].normal.x = vbslq_f32(mask, hit.normal.x, hits[i].normal.x);
+            hits[i].normal.y = vbslq_f32(mask, hit.normal.y, hits[i].normal.y);
+            hits[i].normal.z = vbslq_f32(mask, hit.normal.z, hits[i].normal.z);
+            hits[i].position.x = vbslq_f32(mask, hit.position.x, hits[i].position.x);
+            hits[i].position.y = vbslq_f32(mask, hit.position.y, hits[i].position.y);
+            hits[i].position.z = vbslq_f32(mask, hit.position.z, hits[i].position.z);
+            hits[i].distance = vbslq_f32(mask, hit.distance, hits[i].distance);
+            hits[i].mask = vorrq_u32(hits[i].mask, hitMask);
 
-            bool hasHit = false;
-            RaycastHitx4 hit{};
-
-            for (Sphere& sphere : scene->spheres) {
-                uint32x4_t hitMask = raySphereIntersect(rays[i], sphere, &hit);
-                uint32x4_t closerMask = vcltq_f32(hit.distance, hits[i].distance);
-                uint32x4_t mask = vandq_u32(hitMask, closerMask);
-
-                // select hit values based on mask
-                hits[i].normal.x = vbslq_f32(mask, hit.normal.x, hits[i].normal.x);
-                hits[i].normal.y = vbslq_f32(mask, hit.normal.y, hits[i].normal.y);
-                hits[i].normal.z = vbslq_f32(mask, hit.normal.z, hits[i].normal.z);
-                hits[i].position.x = vbslq_f32(mask, hit.position.x, hits[i].position.x);
-                hits[i].position.y = vbslq_f32(mask, hit.position.y, hits[i].position.y);
-                hits[i].position.z = vbslq_f32(mask, hit.position.z, hits[i].position.z);
-                hits[i].distance = vbslq_f32(mask, hit.distance, hits[i].distance);
-                hits[i].mask = vorrq_u32(hits[i].mask, hitMask);
-
-                Vec3x4 sphereColor(sphere.color);
-                hitColors[i].x = vbslq_f32(mask, sphereColor.x, hitColors[i].x);
-                hitColors[i].y = vbslq_f32(mask, sphereColor.y, hitColors[i].y);
-                hitColors[i].z = vbslq_f32(mask, sphereColor.z, hitColors[i].z);
-            }
-
-            rays[i+1].origin = hits[i].position;
-            rays[i+1].direction = reflect(rays[i].direction, hits[i].normal);
+            Vec3x4 sphereColor(sphere.color);
+            hitColors[i].x = vbslq_f32(mask, sphereColor.x, hitColors[i].x);
+            hitColors[i].y = vbslq_f32(mask, sphereColor.y, hitColors[i].y);
+            hitColors[i].z = vbslq_f32(mask, sphereColor.z, hitColors[i].z);
         }
 
-        for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-            Vec3x4 rayDir = -rays[i].direction;
-            float32x4_t reflectionIntensity = dot_x4(rayDir, hits[i].normal);
-            lightColor *= reflectionIntensity;
-            lightColor += ambientLight;
-            lightColor += shadowRay(hits[i]);
-            lightColor *= hitColors[i];
-
-            //clamp01
-            lightColor.x = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.x));
-            lightColor.y = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.y));
-            lightColor.z = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.z));
-
-            //mask if not hit
-            lightColor.x = vbslq_f32(hits[i].mask, lightColor.x, black.x);
-            lightColor.y = vbslq_f32(hits[i].mask, lightColor.y, black.y);
-            lightColor.z = vbslq_f32(hits[i].mask, lightColor.z, black.z);
-        }
-
-        vst1q_f32(&lightColors.x[a], lightColor.x);
-        vst1q_f32(&lightColors.y[a], lightColor.y);
-        vst1q_f32(&lightColors.z[a], lightColor.z);
+        rays[i+1].origin = hits[i].position;
+        rays[i+1].direction = reflect(rays[i].direction, hits[i].normal);
     }
 
-    return lightColors;
+    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
+        Vec3x4 rayDir = -rays[i].direction;
+        float32x4_t reflectionIntensity = dot_x4(rayDir, hits[i].normal);
+        lightColor *= reflectionIntensity;
+        lightColor += ambientLight;
+        lightColor += shadowRay(hits[i]);
+        lightColor *= hitColors[i];
+
+        //clamp01
+        lightColor.x = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.x));
+        lightColor.y = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.y));
+        lightColor.z = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.z));
+
+        //mask if not hit
+        static const float32x4_t black = vdupq_n_f32(0.0f);
+        lightColor.x = vbslq_f32(hits[i].mask, lightColor.x, black);
+        lightColor.y = vbslq_f32(hits[i].mask, lightColor.y, black);
+        lightColor.z = vbslq_f32(hits[i].mask, lightColor.z, black);
+    }
+
+
+    return lightColor;
 }
 
 Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
@@ -192,16 +148,40 @@ uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHi
 
     mask = vandq_u32(mask, vorrq_u32(maskX1, maskX2));
 
-    float32x4_t distance = vminq_f32(x1, x2);
-    Vec3x4 position = ray.origin + ray.direction * distance;
-    Vec3x4 normal = (position - spherePosition).normalized();
-    
-    hit->distance = distance;
-    hit->position = position;
-    hit->normal = normal;
+    hit->distance = vminq_f32(x1, x2);
+    hit->position = ray.origin + ray.direction * hit->distance;
+    hit->normal = (hit->position - spherePosition).normalized();
     hit->mask = mask;
 
     return mask;
+}
+
+uint8x16_t SIMDRenderer::packBGRA(Vec3x4& color) {
+    // scale to range 0-255
+    color *= vdupq_n_f32(255.0f);
+
+    // convert to uint8
+    uint32x4_t r = vcvtq_u32_f32(color.x);
+    uint32x4_t g = vcvtq_u32_f32(color.y);
+    uint32x4_t b = vcvtq_u32_f32(color.z);
+
+    uint16x4_t r16 = vmovn_u32(r);
+    uint16x4_t g16 = vmovn_u32(g);
+    uint16x4_t b16 = vmovn_u32(b);
+
+    uint8x8_t r8 = vmovn_u16(vcombine_u16(r16, r16));
+    uint8x8_t g8 = vmovn_u16(vcombine_u16(g16, g16));
+    uint8x8_t b8 = vmovn_u16(vcombine_u16(b16, b16));
+    uint8x8_t a8 = vdup_n_u8(255);
+
+    // interleave to BGRA
+    uint8x8_t br = vzip1_u8(b8, r8); // b0 r0 b1 r1 b2 r2 b3 r3
+    uint8x8_t ga = vzip1_u8(g8, a8); // g0 a0 g1 a1 g2 a2 g3 a3
+
+    uint8x8_t bgra_lo = vzip1_u8(br, ga); // b0 g0 r0 a0 b1 g1 r1 a1
+    uint8x8_t bgra_hi = vzip2_u8(br, ga); // b2 g2 r2 a2 b3 g3 r3 a3
+
+    return vcombine_u8(bgra_lo, bgra_hi);
 }
 
 Vec3x4 SIMDRenderer::reflect(Vec3x4 rayDirection, Vec3x4 normal) {
