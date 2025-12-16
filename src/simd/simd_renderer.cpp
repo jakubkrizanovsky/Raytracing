@@ -1,9 +1,6 @@
 #ifdef __ARM_NEON__
 
 #include "simd_renderer.hpp"
-#include "vec3_field.hpp"
-#include "vec3x4.hpp"
-#include "rayx4.hpp"
 #include <core/constants.hpp>
 
 // std
