@@ -59,7 +59,7 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
         if (hits[i].distance > MIN_HIT_DISTANCE) { // has hit
             float reflectionIntensity = glm::dot(-rays[i].direction, hits[i].normal);
             lightColor *= reflectionIntensity;
-            lightColor += ambientLight;
+            lightColor += scene->lightData.ambientLightColor;
             lightColor += shadowRay(hits[i]);
             lightColor *= hitColors[i];
             lightColor = glm::clamp(lightColor, BLACK, WHITE);
@@ -70,7 +70,7 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
 }
 
 glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
-    Ray shadowRay = {hit.position, inverseLightDirection};
+    Ray shadowRay = {hit.position, - scene->lightData.directionalLightDirection};
 
     for (Sphere& sphere : scene->spheres) {
         RaycastHit shadowHit{};
@@ -80,7 +80,7 @@ glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
     }
 
     float intensity = glm::dot(shadowRay.direction, hit.normal);
-    return intensity * WHITE;
+    return intensity * scene->lightData.directionalLightColor;
 }
 
 bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit) {

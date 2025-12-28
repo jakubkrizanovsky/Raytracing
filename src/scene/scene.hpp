@@ -1,6 +1,7 @@
 #pragma once
 
 #include "camera.hpp"
+#include "light_data.hpp"
 #include <core/sphere.hpp>
 
 // std
@@ -10,6 +11,7 @@ namespace rte {
 
 struct Scene {
     Camera camera;
+    LightData lightData;
     std::vector<Sphere> spheres;
 };
 

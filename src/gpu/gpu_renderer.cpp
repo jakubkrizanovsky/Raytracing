@@ -63,8 +63,9 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
     pushConstants.cameraPosition = scene->camera.position;
     pushConstants.cameraForward = scene->camera.forward;
     pushConstants.cameraFOV = glm::radians(scene->camera.fov);
-    pushConstants.inverseLightDirection = inverseLightDirection;
-    pushConstants.ambientLight = ambientLight;
+    pushConstants.inverseLightDirection = - scene->lightData.directionalLightDirection;
+    pushConstants.directionalLightColor = scene->lightData.directionalLightColor;
+    pushConstants.ambientLightColor = scene->lightData.ambientLightColor;
     pushConstants.sphereCount = static_cast<uint32_t>(scene->spheres.size());
     pushConstants.width = extent.width;
     pushConstants.height = extent.height;

@@ -18,7 +18,8 @@ void SIMDRenderer::prepareFrame() {
     camera->prepareFrame(extent);
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);
     
-    tbb::parallel_for(static_cast<uint32_t>(0), extent.height, [&](uint32_t y) {
+    //tbb::parallel_for(static_cast<uint32_t>(0), extent.height, [&](uint32_t y) {
+    for (auto y = 0; y < extent.height; y++) {
         for (auto x = 0; x < extent.width; x+=4) {
             uint32_t pixelIndex = x + y * extent.width;
 
@@ -28,12 +29,15 @@ void SIMDRenderer::prepareFrame() {
             uint8x16_t bgra = packBGRA(pixelColor);
             vst1q_u8(&data[pixelIndex * 4], bgra);
         }
-    });
+    }
+    //});
 }
 
 void SIMDRenderer::setScene(std::shared_ptr<Scene> newScene) {
     CpuRenderer::setScene(newScene);
     camera = std::make_unique<SIMDCamera>(scene->camera);
+    inverseLightDirection = Vec3x4(-scene->lightData.directionalLightDirection);
+    ambientLight = Vec3x4(scene->lightData.ambientLightColor);
 }
 
 Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
@@ -114,7 +118,7 @@ Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
 
     float32x4_t intensity = dot_x4(shadowRay.direction, hit.normal);
     intensity = vbslq_f32(mask, vdupq_n_f32(0.0f), intensity);
-    return {intensity, intensity, intensity};
+    return intensity * scene->lightData.directionalLightColor;
 }
 
 uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHitx4* hit) {

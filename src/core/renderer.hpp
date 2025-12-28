@@ -29,10 +29,6 @@ protected:
     VkExtent2D extent;
 
     std::shared_ptr<Scene> scene = nullptr;
-
-    //TODO - remove
-    static constexpr glm::vec3 ambientLight = glm::vec3(0.1f, 0.1f, 0.1f);
-    const glm::vec3 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
 };
 
 } // namespace rte

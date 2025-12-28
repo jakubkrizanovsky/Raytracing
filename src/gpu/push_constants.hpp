@@ -12,7 +12,9 @@ struct PushConstants {
 
     glm::vec3 inverseLightDirection;
     float _pad1; // padding
-    glm::vec3 ambientLight;
+    glm::vec3 directionalLightColor;
+    float _pad2; // padding
+    glm::vec3 ambientLightColor;
     
     uint32_t sphereCount;
     uint32_t width;

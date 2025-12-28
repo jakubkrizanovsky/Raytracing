@@ -4,6 +4,11 @@
         "forward": [0, 0, 1],
         "fov": 90
     },
+    "lightData": {
+        "directionalLightDirection": [-1, -1, 1],
+        "directionalLightColor": [1, 0.1, 0.1],
+        "ambientLightColor": [0.1, 0.1, 0.1]
+    },
     "spheres": [
         {
             "position": [0, 0, 0],

@@ -9,6 +9,7 @@
 // std
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 namespace rte {
 
@@ -24,8 +25,14 @@ void App::run() {
     renderer->setScene(scene);
 
     while (!window->shouldClose()) {
+        auto startTime = std::chrono::steady_clock::now();
+
         glfwPollEvents();
         swapchain->drawFrame();
+
+        auto endTime = std::chrono::steady_clock::now();
+        auto ms = std::chrono::duration<double, std::milli>(endTime - startTime);
+        std::cout << ms.count() << " ms\n";
     }
 
     vkDeviceWaitIdle(device->getDevice());

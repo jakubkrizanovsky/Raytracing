@@ -26,12 +26,26 @@ void from_json(const json& j, Camera& c) {
     c.fov      = j.at("fov");
 }
 
+void to_json(json& j, const LightData& l) {
+    j = json{{"directionalLightDirection", {l.directionalLightDirection.x, l.directionalLightDirection.y, l.directionalLightDirection.z}},
+             {"directionalLightColor", {l.directionalLightColor.x, l.directionalLightColor.y, l.directionalLightColor.z}},
+             {"ambientLightColor", {l.ambientLightColor.x, l.ambientLightColor.y, l.ambientLightColor.z}}
+    };
+}
+
+void from_json(const json& j, LightData& l) {
+    l.directionalLightDirection = glm::normalize(glm::vec3(j.at("directionalLightDirection")[0], j.at("directionalLightDirection")[1], j.at("directionalLightDirection")[2]));
+    l.directionalLightColor = glm::vec3(j.at("directionalLightColor")[0], j.at("directionalLightColor")[1], j.at("directionalLightColor")[2]);
+    l.ambientLightColor = glm::vec3(j.at("ambientLightColor")[0], j.at("ambientLightColor")[1], j.at("ambientLightColor")[2]);
+}
+
 void to_json(json& j, const Scene& s) {
-    j = json{{"camera", s.camera}, {"spheres", s.spheres}};
+    j = json{{"camera", s.camera}, {"lightData", s.lightData}, {"spheres", s.spheres}};
 }
 
 void from_json(const json& j, Scene& s) {
     s.camera  = j.at("camera").get<Camera>();
+    s.lightData = j.at("lightData").get<LightData>();
     s.spheres = j.at("spheres").get<std::vector<Sphere>>();
 }
 

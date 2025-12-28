@@ -30,8 +30,8 @@ private:
 
     Vec3x4 reflect(Vec3x4 rayDirection, Vec3x4 normal);
 
-    const Vec3x4 inverseLightDirection = glm::normalize(glm::vec3(1, 1, -1));
-    const Vec3x4 ambientLight = {0.1f};
+    Vec3x4 inverseLightDirection;
+    Vec3x4 ambientLight;
 };
 
 } // namespace rte

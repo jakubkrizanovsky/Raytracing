@@ -21,6 +21,7 @@ layout(push_constant) uniform PushConsts {
     vec3 camForward;
     float camFov;
     vec3 inverseLightDirection;
+    vec3 directionalLightColor;
     vec3 ambientLight;
     uint sphereCount;
     uint width;
@@ -103,7 +104,7 @@ vec3 shadowRay(RaycastHit hit) {
     }
 
     float intensity = dot(shadowRay.direction, hit.normal);
-    return vec3(intensity);
+    return intensity * pushConstants.directionalLightColor;
 }
 
 vec3 raycast(Ray ray) {
