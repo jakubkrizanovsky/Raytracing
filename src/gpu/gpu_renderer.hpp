@@ -1,6 +1,7 @@
 #pragma once
 
 #include "compute_pipeline.hpp"
+#include "push_constants.hpp"
 #include <core/renderer.hpp>
 
 #include <glm/glm.hpp>
@@ -28,11 +29,16 @@ private:
     VkImageView imageView = VK_NULL_HANDLE;
     std::unique_ptr<ComputePipeline> computePipeline;
 
+    PushConstants pushConstants {};
+
     void createInputBuffer();
     void cleanupInputBuffer();
     void createImage();
     void createImageView();
     void cleanUpImageAndView();
+    
+    void cmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage dstImage, VkImageLayout srcImageLayout, 
+            VkImageLayout dstImageLayout);
 
     glm::uvec2 calculateGroupCounts();
     VkDeviceSize calculateInputBufferSize();

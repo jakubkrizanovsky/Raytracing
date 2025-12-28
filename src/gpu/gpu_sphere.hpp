@@ -5,14 +5,14 @@
 #include <glm/glm.hpp>
 
 namespace rte {
-
+	
 struct GPUSphere {
     glm::vec3 position;
     float radius;
     glm::vec3 color;
     float _padding;
 
-    GPUSphere(const Sphere& cpuSphere)
+    explicit GPUSphere(const Sphere& cpuSphere)
         : position(cpuSphere.position),
           radius(cpuSphere.radius),
           color(cpuSphere.color),

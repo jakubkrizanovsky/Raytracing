@@ -1,6 +1,5 @@
 #include "gpu_renderer.hpp"
 #include "gpu_sphere.hpp"
-#include "push_constants.hpp"
 
 #include <iostream>
 
@@ -17,49 +16,6 @@ GPURenderer::~GPURenderer() {
 }
 
 void GPURenderer::prepareFrame() {
-    //TODO - don't do this every frame unless the scene has changed
-    size_t dataSize = calculateInputBufferSize();
-
-    // TODO - std::transform?
-    // convert spheres to padded gpu variants
-    std::vector<GPUSphere> gpuSpheres;
-    gpuSpheres.reserve(scene->spheres.size());
-    for (const Sphere& sphere : scene->spheres) {
-        gpuSpheres.emplace_back(sphere);
-    }
-    
-    memcpy(inputData, gpuSpheres.data(), dataSize);
-}
-
-void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swapchainImage, uint32_t imageIndex) {
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipeline());
-
-    VkDescriptorSet descriptorSet = computePipeline->getDescriptorSet(imageIndex);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipelineLayout(),
-            0, 1, &descriptorSet, 0, nullptr);
-
-    PushConstants pushConstants{};
     pushConstants.cameraPosition = scene->camera.position;
     pushConstants.cameraForward = scene->camera.forward;
     pushConstants.cameraFOV = glm::radians(scene->camera.fov);
@@ -69,6 +25,18 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
     pushConstants.sphereCount = static_cast<uint32_t>(scene->spheres.size());
     pushConstants.width = extent.width;
     pushConstants.height = extent.height;
+}
+
+void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swapchainImage, uint32_t imageIndex) {
+    cmdTransitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, 
+            VK_IMAGE_LAYOUT_GENERAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipeline());
+
+    VkDescriptorSet descriptorSet = computePipeline->getDescriptorSet(imageIndex);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline->getPipelineLayout(),
+            0, 1, &descriptorSet, 0, nullptr);
 
     vkCmdPushConstants(commandBuffer, computePipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, 
             sizeof(PushConstants), &pushConstants);
@@ -76,49 +44,16 @@ void GPURenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, VkImage swa
     glm::uvec2 groupCounts = calculateGroupCounts();
     vkCmdDispatch(commandBuffer, groupCounts.x, groupCounts.y, 1);
 
-    VkImageBlit blitRegion{};
-    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blitRegion.srcSubresource.mipLevel = 0;
-    blitRegion.srcSubresource.baseArrayLayer = 0;
-    blitRegion.srcSubresource.layerCount = 1;
-    blitRegion.srcOffsets[0] = {0, 0, 0};
-    blitRegion.srcOffsets[1] = {(int)extent.width, (int)extent.height, 1};
+    cmdTransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_UNDEFINED, 
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blitRegion.dstSubresource.mipLevel = 0;
-    blitRegion.dstSubresource.baseArrayLayer = 0;
-    blitRegion.dstSubresource.layerCount = 1;
-    blitRegion.dstOffsets[0] = {0, 0, 0};
-    blitRegion.dstOffsets[1] = {(int)extent.width, (int)extent.height, 1};
+    cmdBlitImage(commandBuffer, image, swapchainImage, VK_IMAGE_LAYOUT_GENERAL, 
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    barrier.image = swapchainImage;
-    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-
-    vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, swapchainImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            1, &blitRegion, VK_FILTER_LINEAR);
-
-    barrier.image = swapchainImage;
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
+    cmdTransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 }
 
 void GPURenderer::setExtent(VkExtent2D extent) {
@@ -139,6 +74,16 @@ void GPURenderer::setScene(std::shared_ptr<Scene> newScene) {
     createInputBuffer();
 
     computePipeline->connectDescriptorSets(imageView, inputBuffer);
+
+    // convert spheres to padded gpu variants
+    std::vector<GPUSphere> gpuSpheres;
+    gpuSpheres.reserve(scene->spheres.size());
+    std::transform(scene->spheres.begin(), scene->spheres.end(), gpuSpheres.begin(),
+        [](const Sphere& sphere) { return GPUSphere(sphere); });
+
+    // copy data to input buffer
+    size_t dataSize = calculateInputBufferSize();
+    memcpy(inputData, gpuSpheres.data(), dataSize);
 }
 
 void GPURenderer::createInputBuffer() {
@@ -216,6 +161,28 @@ void GPURenderer::cleanUpImageAndView() {
         vkDestroyImage(device->getDevice(), image, nullptr);
         vkFreeMemory(device->getDevice(), imageMemory, nullptr);
     }
+}
+
+void GPURenderer::cmdBlitImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage dstImage, 
+        VkImageLayout srcImageLayout, VkImageLayout dstImageLayout) 
+{
+    VkImageBlit blitRegion{};
+    blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.srcSubresource.mipLevel = 0;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcOffsets[0] = {0, 0, 0};
+    blitRegion.srcOffsets[1] = {(int)extent.width, (int)extent.height, 1};
+
+    blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blitRegion.dstSubresource.mipLevel = 0;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstOffsets[0] = {0, 0, 0};
+    blitRegion.dstOffsets[1] = {(int)extent.width, (int)extent.height, 1};
+
+    vkCmdBlitImage(commandBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, 
+            1, &blitRegion, VK_FILTER_LINEAR);
 }
 
 glm::uvec2 GPURenderer::calculateGroupCounts() {

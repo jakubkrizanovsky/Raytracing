@@ -29,6 +29,10 @@ protected:
     VkExtent2D extent;
 
     std::shared_ptr<Scene> scene = nullptr;
+
+    void cmdTransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, 
+            VkImageLayout oldLayout, VkImageLayout newLayout, VkPipelineStageFlags srcStage, 
+            VkPipelineStageFlags dstStage);
 };
 
 } // namespace rte
