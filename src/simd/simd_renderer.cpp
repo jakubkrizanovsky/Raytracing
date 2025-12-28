@@ -24,29 +24,28 @@ void SIMDRenderer::prepareFrame() {
         for (auto x = 0; x < extent.width; x+=4) {
             uint32_t pixelIndex = x + y * extent.width;
 
-            Rayx4 ray = camera->getRay(x, y);
-            Vec3x4 pixelColor = raycast(ray);
+            Ray_x4 ray = camera->getRay(x, y);
+            Vec3_x4 pixelColor = raycast(ray);
 
             uint8x16_t bgra = packBGRA(pixelColor);
             vst1q_u8(&data[pixelIndex * 4], bgra);
         }
-    //}
     });
 }
 
 void SIMDRenderer::setScene(std::shared_ptr<Scene> newScene) {
     CpuRenderer::setScene(newScene);
     camera = std::make_unique<SIMDCamera>(scene->camera);
-    inverseLightDirection = Vec3x4(-scene->lightData.directionalLightDirection);
-    ambientLight = Vec3x4(scene->lightData.ambientLightColor);
+    inverseLightDirection = Vec3_x4(-scene->lightData.directionalLightDirection);
+    ambientLight = Vec3_x4(scene->lightData.ambientLightColor);
 }
 
-Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
-    Vec3x4 lightColor = BLACK;
+Vec3_x4 SIMDRenderer::raycast(Ray_x4 sceneRay) {
+    Vec3_x4 lightColor = BLACK;
 
-    Rayx4 rays[MAX_REFLECTIONS + 1];
-    RaycastHitx4 hits[MAX_REFLECTIONS] {};
-    Vec3x4 hitColors[MAX_REFLECTIONS] {};
+    Ray_x4 rays[MAX_REFLECTIONS + 1];
+    RaycastHit_x4 hits[MAX_REFLECTIONS] {};
+    Vec3_x4 hitColors[MAX_REFLECTIONS] {};
 
     rays[0] = sceneRay;
 
@@ -56,7 +55,7 @@ Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
         hits[i].mask = vdupq_n_u32(0);
 
         bool hasHit = false;
-        RaycastHitx4 hit{};
+        RaycastHit_x4 hit{};
 
         for (Sphere& sphere : scene->spheres) {
             uint32x4_t hitMask = raySphereIntersect(rays[i], sphere, &hit);
@@ -73,7 +72,7 @@ Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
             hits[i].distance = vbslq_f32(mask, hit.distance, hits[i].distance);
             hits[i].mask = vorrq_u32(hits[i].mask, hitMask);
 
-            Vec3x4 sphereColor(sphere.color);
+            Vec3_x4 sphereColor(sphere.color);
             hitColors[i].x = vbslq_f32(mask, sphereColor.x, hitColors[i].x);
             hitColors[i].y = vbslq_f32(mask, sphereColor.y, hitColors[i].y);
             hitColors[i].z = vbslq_f32(mask, sphereColor.z, hitColors[i].z);
@@ -84,7 +83,7 @@ Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
     }
 
     for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-        Vec3x4 rayDir = -rays[i].direction;
+        Vec3_x4 rayDir = -rays[i].direction;
         float32x4_t reflectionIntensity = dot_x4(rayDir, hits[i].normal);
         lightColor *= reflectionIntensity;
         lightColor += ambientLight;
@@ -107,12 +106,12 @@ Vec3x4 SIMDRenderer::raycast(Rayx4 sceneRay) {
     return lightColor;
 }
 
-Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
-    Rayx4 shadowRay = {hit.position, inverseLightDirection};
+Vec3_x4 SIMDRenderer::shadowRay(RaycastHit_x4 hit) {
+    Ray_x4 shadowRay = {hit.position, inverseLightDirection};
 
     uint32x4_t mask = vdupq_n_u32(0);
     for (Sphere& sphere : scene->spheres) {
-        RaycastHitx4 shadowHit;
+        RaycastHit_x4 shadowHit;
         uint32x4_t hitMask = raySphereIntersect(shadowRay, sphere, &shadowHit);
         mask = vorrq_u32(mask, hitMask);
     }
@@ -122,14 +121,14 @@ Vec3x4 SIMDRenderer::shadowRay(RaycastHitx4 hit) {
     return intensity * scene->lightData.directionalLightColor;
 }
 
-uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHitx4* hit) {
-    Vec3x4 spherePosition = {
+uint32x4_t SIMDRenderer::raySphereIntersect(Ray_x4 ray, Sphere &sphere, RaycastHit_x4* hit) {
+    Vec3_x4 spherePosition = {
         vdupq_n_f32(sphere.position.x),
         vdupq_n_f32(sphere.position.y),
         vdupq_n_f32(sphere.position.z)
     };
 
-    Vec3x4 positionDelta = spherePosition - ray.origin;
+    Vec3_x4 positionDelta = spherePosition - ray.origin;
 
     float32x4_t a = dot_x4(ray.direction, ray.direction);
     float32x4_t b = vmulq_f32(vdupq_n_f32(-2.0f), dot_x4(positionDelta, ray.direction));
@@ -161,7 +160,7 @@ uint32x4_t SIMDRenderer::raySphereIntersect(Rayx4 ray, Sphere &sphere, RaycastHi
     return mask;
 }
 
-uint8x16_t SIMDRenderer::packBGRA(Vec3x4& color) {
+uint8x16_t SIMDRenderer::packBGRA(Vec3_x4& color) {
     // scale to range 0-255
     color *= vdupq_n_f32(255.0f);
 
@@ -189,7 +188,7 @@ uint8x16_t SIMDRenderer::packBGRA(Vec3x4& color) {
     return vcombine_u8(bgra_lo, bgra_hi);
 }
 
-Vec3x4 SIMDRenderer::reflect(Vec3x4 rayDirection, Vec3x4 normal) {
+Vec3_x4 SIMDRenderer::reflect(Vec3_x4 rayDirection, Vec3_x4 normal) {
     return rayDirection - 2.0f * normal * dot_x4(rayDirection, normal);
 }
 
