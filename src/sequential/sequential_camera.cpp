@@ -5,8 +5,9 @@
 
 namespace rte {
 
-void printVec(glm::vec3 vec) {
-    std::cout << vec.x << ", " << vec.y << ", " << vec.z << std::endl;
+void SequentialCamera::updateCameraData(Camera cameraData) {
+    position = cameraData.position;
+    forward = cameraData.forward;
 }
 
 void SequentialCamera::prepareFrame(VkExtent2D extent) {

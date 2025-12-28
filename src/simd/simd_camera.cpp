@@ -3,6 +3,11 @@
 
 namespace rte {
 
+void SIMDCamera::updateCameraData(Camera cameraData) {
+    position = cameraData.position;
+    forward = cameraData.forward;
+}
+
 void SIMDCamera::prepareFrame(VkExtent2D extent) {
     right = glm::cross(UP, forward);
 

@@ -12,6 +12,7 @@ constexpr uint MAX_REFLECTIONS = 5;
 constexpr float MIN_HIT_DISTANCE = 0.001f;
 
 void SequentialRenderer::prepareFrame() {
+    camera->updateCameraData(scene->camera);
     camera->prepareFrame(extent);
 
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);

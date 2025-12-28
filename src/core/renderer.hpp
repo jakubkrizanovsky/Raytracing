@@ -2,7 +2,6 @@
 
 #include "device.hpp"
 #include "sphere.hpp"
-#include "camera_data.hpp"
 #include <scene/scene.hpp>
 
 #include <vulkan/vulkan.h>

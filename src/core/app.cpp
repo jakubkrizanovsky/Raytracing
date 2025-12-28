@@ -18,19 +18,25 @@ App::App(RunParams runParams) : runParams{runParams} {
     device = std::make_shared<Device>(window);
     renderer = createRenderer(runParams.runType);
     swapchain = std::make_unique<Swapchain>(window, device, renderer);
+    sceneUpdater = std::make_unique<SceneUpdater>();
 }
 
 void App::run() {
     std::shared_ptr<Scene> scene = loadScene(runParams.scenePath);
     renderer->setScene(scene);
+    sceneUpdater->setScene(scene);
 
+    float duration = 0.0f;
     while (!window->shouldClose()) {
         auto startTime = std::chrono::steady_clock::now();
 
         glfwPollEvents();
+        sceneUpdater->updateScene(duration);
         swapchain->drawFrame();
 
         auto endTime = std::chrono::steady_clock::now();
+        duration = std::chrono::duration<float>(endTime - startTime).count();
+
         auto ms = std::chrono::duration<double, std::milli>(endTime - startTime);
         std::cout << ms.count() << " ms\n";
     }

@@ -2,11 +2,13 @@
     "camera": {
         "position": [0, 0, -5],
         "forward": [0, 0, 1],
-        "fov": 90
+        "fov": 90,
+        "focusPoint": [0, 0, 0],
+        "orbitVelocity": 0.5
     },
     "lightData": {
         "directionalLightDirection": [-1, -1, 1],
-        "directionalLightColor": [1, 0.1, 0.1],
+        "directionalLightColor": [0.7, 0.7, 0.7],
         "ambientLightColor": [0.1, 0.1, 0.1]
     },
     "spheres": [

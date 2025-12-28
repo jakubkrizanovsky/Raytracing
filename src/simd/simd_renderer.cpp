@@ -15,11 +15,12 @@ constexpr uint MAX_REFLECTIONS = 5;
 constexpr float MIN_HIT_DISTANCE = 0.001f;
 
 void SIMDRenderer::prepareFrame() {
+    camera->updateCameraData(scene->camera);
     camera->prepareFrame(extent);
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);
     
-    //tbb::parallel_for(static_cast<uint32_t>(0), extent.height, [&](uint32_t y) {
-    for (auto y = 0; y < extent.height; y++) {
+    tbb::parallel_for(static_cast<uint32_t>(0), extent.height, [&](uint32_t y) {
+    //for (auto y = 0; y < extent.height; y++) {
         for (auto x = 0; x < extent.width; x+=4) {
             uint32_t pixelIndex = x + y * extent.width;
 
@@ -29,8 +30,8 @@ void SIMDRenderer::prepareFrame() {
             uint8x16_t bgra = packBGRA(pixelColor);
             vst1q_u8(&data[pixelIndex * 4], bgra);
         }
-    }
-    //});
+    //}
+    });
 }
 
 void SIMDRenderer::setScene(std::shared_ptr<Scene> newScene) {

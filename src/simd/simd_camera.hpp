@@ -12,6 +12,7 @@ public:
     SIMDCamera(Camera cameraData) : position{cameraData.position}, 
             forward{cameraData.forward}, fov{cameraData.fov} {}
 
+    void updateCameraData(Camera cameraData);
     void prepareFrame(VkExtent2D extent);
     Rayx4 getRay(uint32_t xIndex, uint32_t yIndex);
 private:
