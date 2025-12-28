@@ -4,7 +4,7 @@
         "forward": [0, 0, 1],
         "fov": 90,
         "focusPoint": [0, 0, 0],
-        "orbitVelocity": 0.5
+        "orbitVelocity": 1
     },
     "lightData": {
         "directionalLightDirection": [-1, -1, 1],
@@ -18,12 +18,12 @@
             "color": [0, 1, 1]
         },
         {
-            "position": [1, 0.5, 1],
+            "position": [1, 0.75, 1],
             "radius": 0.5,
             "color": [1, 0.1, 0.1]
         },
         {
-            "position": [-1, 0.5, -1],
+            "position": [-1, 0.75, -1],
             "radius": 0.5,
             "color": [0.1, 1, 0.1]
         }

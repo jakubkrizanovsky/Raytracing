@@ -1,21 +1,20 @@
 #include "scene_updater.hpp"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 
 namespace rte {
 
 void SceneUpdater::updateScene(float deltaTime) {
-    // Update camera position based on orbit velocity
+    // update camera position based on orbit velocity
     float angle = scene->camera.orbitVelocity * deltaTime;
     glm::vec3 direction = scene->camera.position - scene->camera.focusPoint;
-    float radius = glm::length(direction);
-    float currentAngle = atan2(direction.z, direction.x);
-    float newAngle = currentAngle + angle;
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0));
 
-    scene->camera.position.x = scene->camera.focusPoint.x + radius * cos(newAngle);
-    scene->camera.position.z = scene->camera.focusPoint.z + radius * sin(newAngle);
+    scene->camera.position = scene->camera.focusPoint + glm::vec3(rotation * glm::vec4(direction, 0.0f));
 
-    // Update camera forward vector
+    // update camera forward vector
     scene->camera.forward = glm::normalize(scene->camera.focusPoint - scene->camera.position);
 }
 
