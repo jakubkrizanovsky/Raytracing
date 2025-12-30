@@ -2,8 +2,8 @@
 #ifdef __ARM_NEON__
 
 
-#include "ray_x4.hpp"
-#include "raycast_hit_x4.hpp"
+#include "ray_x8.hpp"
+#include "raycast_hit_x8.hpp"
 #include "simd_camera.hpp"
 #include <core/cpu_renderer.hpp>
 #include <sequential/raycast_hit.hpp>
@@ -23,15 +23,15 @@ public:
 private:
     std::unique_ptr<SIMDCamera> camera = nullptr;
 
-    Vec3_x4 raycast(Ray_x4 ray);
-    Vec3_x4 shadowRay(RaycastHit_x4 hit);
-    uint32x4_t raySphereIntersect(Ray_x4 ray, Sphere& sphere, RaycastHit_x4* hit);
-    uint8x16_t packBGRA(Vec3_x4& color);
+    Vec3_x8 raycast(Ray_x8 ray);
+    Vec3_x8 shadowRay(RaycastHit_x8 hit);
+    uint16x8_t raySphereIntersect(Ray_x8 ray, Sphere& sphere, RaycastHit_x8* hit);
+    uint8x8x4_t packBGRA(Vec3_x8& color);
 
-    Vec3_x4 reflect(Vec3_x4 rayDirection, Vec3_x4 normal);
+    Vec3_x8 reflect(Vec3_x8 rayDirection, Vec3_x8 normal);
 
-    Vec3_x4 inverseLightDirection;
-    Vec3_x4 ambientLight;
+    Vec3_x8 inverseLightDirection;
+    Vec3_x8 ambientLight;
 };
 
 } // namespace rte
