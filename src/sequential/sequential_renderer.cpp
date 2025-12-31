@@ -22,9 +22,9 @@ void SequentialRenderer::prepareFrame() {
             glm::vec3 pixelColor = raycast(ray);
             
             uint32_t pixelIndex = (x + y * extent.width) * 4;
-            data[pixelIndex + 2] = static_cast<uint8_t>(pixelColor.r * 255);
-            data[pixelIndex + 1] = static_cast<uint8_t>(pixelColor.g * 255);
             data[pixelIndex + 0] = static_cast<uint8_t>(pixelColor.b * 255);
+            data[pixelIndex + 1] = static_cast<uint8_t>(pixelColor.g * 255);
+            data[pixelIndex + 2] = static_cast<uint8_t>(pixelColor.r * 255);
             data[pixelIndex + 3] = 255;
         }
     }
@@ -57,12 +57,14 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
     }
 
     for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-        if (hits[i].distance > MIN_HIT_DISTANCE) { // has hit
-            float reflectionIntensity = glm::dot(-rays[i].direction, hits[i].normal);
+        if (hits[i].hit) {
+            float reflectionIntensity = DIFFUSE_REFLECTION_CONSTANT * glm::dot(-rays[i].direction, hits[i].normal);
             lightColor *= reflectionIntensity;
             lightColor += scene->lightData.ambientLightColor;
             lightColor += shadowRay(hits[i]);
             lightColor *= hitColors[i];
+            lightColor += specular(rays[i], hits[i]);
+
             lightColor = glm::clamp(lightColor, BLACK, WHITE);
         }
     }
@@ -82,6 +84,15 @@ glm::vec3 SequentialRenderer::shadowRay(RaycastHit hit) {
 
     float intensity = glm::dot(shadowRay.direction, hit.normal);
     return intensity * scene->lightData.directionalLightColor;
+}
+
+glm::vec3 SequentialRenderer::specular(Ray &ray, RaycastHit &hit) {
+    glm::vec3 lightReflection = glm::reflect(scene->lightData.directionalLightDirection, hit.normal);
+
+    float phongIntensity = glm::dot(lightReflection, -ray.direction);
+    phongIntensity = glm::clamp(phongIntensity, 0.0f, 1.0f);
+
+    return SPECULAR_REFLECTION_CONSTANT * pow(phongIntensity, SPECULAR_EXPONENT) * WHITE;
 }
 
 bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit) {
@@ -111,6 +122,7 @@ bool SequentialRenderer::raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit
 
     hit.position = ray.origin + ray.direction * hit.distance;
     hit.normal = glm::normalize(hit.position - sphere.position);
+    hit.hit = true;
 
     return true;
 }

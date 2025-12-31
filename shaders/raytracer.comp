@@ -23,6 +23,9 @@ layout(push_constant) uniform PushConsts {
     vec3 inverseLightDirection;
     vec3 directionalLightColor;
     vec3 ambientLight;
+    float diffuseReflectionConstant;
+    float specularReflectionConstant;
+    float specularExponent;
     uint sphereCount;
     uint width;
     uint height;
@@ -93,6 +96,15 @@ RaycastHit raySphereIntersect(Ray ray, Sphere sphere) {
     return hit;
 }
 
+vec3 specular(Ray ray, RaycastHit hit) {
+    vec3 lightReflection = reflect(-pushConstants.inverseLightDirection, hit.normal);
+
+    float phongIntensity = dot(lightReflection, -ray.direction);
+    phongIntensity = clamp(phongIntensity, 0.0, 1.0);
+
+    return pushConstants.specularReflectionConstant * pow(phongIntensity, pushConstants.specularExponent) * vec3(1.0);
+}
+
 vec3 shadowRay(RaycastHit hit) {
     Ray shadowRay = Ray(hit.position, pushConstants.inverseLightDirection);
 
@@ -136,6 +148,7 @@ vec3 raycast(Ray ray) {
             lightColor += pushConstants.ambientLight;
             lightColor += shadowRay(hits[i]);
             lightColor *= hitColors[i];
+            lightColor += specular(rays[i], hits[i]);
             lightColor = clamp(lightColor, 0.0, 1.0);
         }
     }

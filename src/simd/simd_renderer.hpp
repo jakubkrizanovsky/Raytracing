@@ -25,6 +25,7 @@ private:
 
     Vec3_x4 raycast(Ray_x4 ray);
     Vec3_x4 shadowRay(RaycastHit_x4 hit);
+    Vec3_x4 specular(Ray_x4& ray, RaycastHit_x4& hit);
     uint32x4_t raySphereIntersect(Ray_x4 ray, Sphere& sphere, RaycastHit_x4* hit);
     uint8x16_t packBGRA(Vec3_x4& color);
 

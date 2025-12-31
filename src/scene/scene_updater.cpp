@@ -7,6 +7,10 @@
 namespace rte {
 
 void SceneUpdater::updateScene(float deltaTime) {
+    if(scene->camera.orbitVelocity == 0.0f) {
+        return;
+    }
+
     // update camera position based on orbit velocity
     float angle = scene->camera.orbitVelocity * deltaTime;
     glm::vec3 direction = scene->camera.position - scene->camera.focusPoint;

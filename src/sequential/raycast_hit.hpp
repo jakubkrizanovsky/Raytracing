@@ -10,6 +10,7 @@ struct RaycastHit {
     glm::vec3 position;
     glm::vec3 normal;
     float distance;
+    bool hit;
 };
 
 } // namespace rte

@@ -1,5 +1,6 @@
 #include "gpu_renderer.hpp"
 #include "gpu_sphere.hpp"
+#include <core/constants.hpp>
 
 #include <iostream>
 
@@ -19,9 +20,15 @@ void GPURenderer::prepareFrame() {
     pushConstants.cameraPosition = scene->camera.position;
     pushConstants.cameraForward = scene->camera.forward;
     pushConstants.cameraFOV = glm::radians(scene->camera.fov);
+
     pushConstants.inverseLightDirection = - scene->lightData.directionalLightDirection;
     pushConstants.directionalLightColor = scene->lightData.directionalLightColor;
     pushConstants.ambientLightColor = scene->lightData.ambientLightColor;
+
+    pushConstants.diffuseReflectionConstant = DIFFUSE_REFLECTION_CONSTANT;
+    pushConstants.specularReflectionConstant = SPECULAR_REFLECTION_CONSTANT;
+    pushConstants.specularExponent = SPECULAR_EXPONENT;
+
     pushConstants.sphereCount = static_cast<uint32_t>(scene->spheres.size());
     pushConstants.width = extent.width;
     pushConstants.height = extent.height;

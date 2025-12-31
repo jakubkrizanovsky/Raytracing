@@ -54,7 +54,6 @@ Vec3_x4 SIMDRenderer::raycast(Ray_x4 sceneRay) {
         hits[i].distance = vdupq_n_f32(std::numeric_limits<float>::max());
         hits[i].mask = vdupq_n_u32(0);
 
-        bool hasHit = false;
         RaycastHit_x4 hit{};
 
         for (Sphere& sphere : scene->spheres) {
@@ -85,15 +84,13 @@ Vec3_x4 SIMDRenderer::raycast(Ray_x4 sceneRay) {
     for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
         Vec3_x4 rayDir = -rays[i].direction;
         float32x4_t reflectionIntensity = dot_x4(rayDir, hits[i].normal);
+        reflectionIntensity = vmulq_f32(vdupq_n_f32(DIFFUSE_REFLECTION_CONSTANT), reflectionIntensity);
         lightColor *= reflectionIntensity;
         lightColor += ambientLight;
         lightColor += shadowRay(hits[i]);
         lightColor *= hitColors[i];
-
-        //clamp01
-        lightColor.x = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.x));
-        lightColor.y = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.y));
-        lightColor.z = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), lightColor.z));
+        lightColor += specular(rays[i], hits[i]);
+        lightColor = lightColor.clamp01();
 
         //mask if not hit
         static const float32x4_t black = vdupq_n_f32(0.0f);
@@ -119,6 +116,20 @@ Vec3_x4 SIMDRenderer::shadowRay(RaycastHit_x4 hit) {
     float32x4_t intensity = dot_x4(shadowRay.direction, hit.normal);
     intensity = vbslq_f32(mask, vdupq_n_f32(0.0f), intensity);
     return intensity * scene->lightData.directionalLightColor;
+}
+
+Vec3_x4 SIMDRenderer::specular(Ray_x4 &ray, RaycastHit_x4 &hit) {
+    Vec3_x4 lightReflection = reflect(-inverseLightDirection, hit.normal);
+
+    float32x4_t phongIntensity = dot_x4(lightReflection, -ray.direction);
+    phongIntensity = vmaxq_f32(vdupq_n_f32(0.0f), vminq_f32(vdupq_n_f32(1.0f), phongIntensity));
+
+    // exponentiation by squaring
+    for(int i = 0; i < SPECULAR_EXPONENT_POW2; i++) {
+        phongIntensity = vmulq_f32(phongIntensity, phongIntensity);
+    }
+
+    return Vec3_x4(SPECULAR_REFLECTION_CONSTANT * phongIntensity);
 }
 
 uint32x4_t SIMDRenderer::raySphereIntersect(Ray_x4 ray, Sphere &sphere, RaycastHit_x4* hit) {

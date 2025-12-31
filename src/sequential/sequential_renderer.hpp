@@ -21,6 +21,7 @@ private:
 
     glm::vec3 raycast(Ray& ray);
     glm::vec3 shadowRay(RaycastHit hit);
+    glm::vec3 specular(Ray& ray, RaycastHit& hit);
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit);
 };
 

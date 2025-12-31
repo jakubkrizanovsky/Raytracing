@@ -15,6 +15,10 @@ struct PushConstants {
     glm::vec3 directionalLightColor;
     float _pad2; // padding
     glm::vec3 ambientLightColor;
+
+    float diffuseReflectionConstant;
+    float specularReflectionConstant;
+    float specularExponent;
     
     uint32_t sphereCount;
     uint32_t width;

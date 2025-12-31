@@ -21,6 +21,16 @@ Vec3_x4 Vec3_x4::normalized() const {
     };
 }
 
+Vec3_x4 Vec3_x4::clamp01() const {
+    float32x4_t zero = vdupq_n_f32(0.0f);
+    float32x4_t one = vdupq_n_f32(1.0f);
+    return {
+        vmaxq_f32(zero, vminq_f32(one, x)),
+        vmaxq_f32(zero, vminq_f32(one, y)),
+        vmaxq_f32(zero, vminq_f32(one, z))
+    };
+}
+
 }
 
 #endif // __ARM_NEON__
