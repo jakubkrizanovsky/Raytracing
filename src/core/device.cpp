@@ -102,8 +102,8 @@ void Device::createInstance() {
     createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     createInfo.pNext = nullptr;
 
+    const char* layers[1] = {validationLayerName.c_str()};
     if (enableValidationLayers) {
-        const char* layers[1] = {validationLayerName.c_str()};
         createInfo.enabledLayerCount = 1;
         createInfo.ppEnabledLayerNames = layers;
     } else {
