@@ -16,6 +16,7 @@ struct PushConstants {
     float _pad2; // padding
     glm::vec3 ambientLightColor;
 
+    uint32_t maxReflections;
     float diffuseReflectionConstant;
     float specularReflectionConstant;
     float specularExponent;

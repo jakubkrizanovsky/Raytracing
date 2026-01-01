@@ -25,6 +25,8 @@ void GPURenderer::prepareFrame() {
     pushConstants.directionalLightColor = scene->lightData.directionalLightColor;
     pushConstants.ambientLightColor = scene->lightData.ambientLightColor;
 
+    pushConstants.maxReflections = MAX_REFLECTIONS;
+
     pushConstants.diffuseReflectionConstant = DIFFUSE_REFLECTION_CONSTANT;
     pushConstants.specularReflectionConstant = SPECULAR_REFLECTION_CONSTANT;
     pushConstants.specularExponent = SPECULAR_EXPONENT;

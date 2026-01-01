@@ -11,6 +11,9 @@ constexpr glm::vec3 ONE = {1, 1, 1};
 constexpr glm::vec3 BLACK = {0, 0, 0};
 constexpr glm::vec3 WHITE = {1, 1, 1};
 
+constexpr unsigned int MAX_REFLECTIONS = 5;
+constexpr float MIN_HIT_DISTANCE = 0.001f;
+
 constexpr float DIFFUSE_REFLECTION_CONSTANT = 0.8f;
 constexpr float SPECULAR_REFLECTION_CONSTANT = 0.9f;
 constexpr unsigned int SPECULAR_EXPONENT_POW2 = 6;

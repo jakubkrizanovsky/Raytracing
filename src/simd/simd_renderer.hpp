@@ -24,8 +24,6 @@ private:
     std::unique_ptr<SIMDCamera> camera = nullptr;
 
     Vec3_x4 raycast(Ray_x4 ray);
-    Vec3_x4 raycastOld(Ray_x4 ray);
-    Vec3_x4 raycastRecursive(Ray_x4 ray, unsigned int recursive);
     Vec3_x4 shadowRay(RaycastHit_x4 hit);
     Vec3_x4 specular(Ray_x4& ray, RaycastHit_x4& hit);
     uint32x4_t raySphereIntersect(Ray_x4 ray, Sphere& sphere, RaycastHit_x4* hit);

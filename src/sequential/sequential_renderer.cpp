@@ -8,9 +8,6 @@
 
 namespace rte {
 
-constexpr uint MAX_REFLECTIONS = 5;
-constexpr float MIN_HIT_DISTANCE = 0.001f;
-
 void SequentialRenderer::prepareFrame() {
     camera->updateCameraData(scene->camera);
     camera->prepareFrame(extent);
@@ -54,93 +51,21 @@ glm::vec3 SequentialRenderer::raycast(Ray &ray) {
             }
         }
 
-        if (hit.hit) {
-            float reflectionIntensity = DIFFUSE_REFLECTION_CONSTANT * glm::dot(-ray.direction, hit.normal);
-            
-            lightColor += throughput * hitColor * scene->lightData.ambientLightColor;
-            lightColor += throughput * hitColor * shadowRay(hit);
-            lightColor += throughput * specular(ray, hit);
-            
-            lightColor = glm::clamp(lightColor, BLACK, WHITE);
-
-            ray = {hit.position, glm::reflect(ray.direction, hit.normal)};
-            
-            throughput *= reflectionIntensity * hitColor;
-        } else {
+        if(!hit.hit) {
             break;
         }
-    }
-
-    return lightColor;
-}
-
-glm::vec3 SequentialRenderer::raycastOld(Ray &ray) {
-    glm::vec3 lightColor = BLACK;
-    Ray rays[MAX_REFLECTIONS + 1];
-    RaycastHit hits[MAX_REFLECTIONS] {};
-    glm::vec3 hitColors[MAX_REFLECTIONS] {};
-    rays[0] = ray;
-
-    for (auto i = 0; i < MAX_REFLECTIONS; i++) {        
-        hits[i].distance = std::numeric_limits<float>::max();
-        RaycastHit hit{};
-        for (Sphere& sphere : scene->spheres) {
-            if (raySphereIntersect(rays[i], sphere, hit) &&
-                    hit.distance < hits[i].distance) 
-            {
-                hits[i] = hit;
-                hitColors[i] = sphere.color;
-                rays[i+1] = {hit.position, glm::reflect(rays[i].direction, hit.normal)};
-            }
-        }
-    }
-
-    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-        if (hits[i].hit) {
-            float reflectionIntensity = DIFFUSE_REFLECTION_CONSTANT * glm::dot(-rays[i].direction, hits[i].normal);
-            lightColor *= reflectionIntensity;
-            lightColor += scene->lightData.ambientLightColor;
-            lightColor += shadowRay(hits[i]);
-            lightColor *= hitColors[i];
-            lightColor += specular(rays[i], hits[i]);
-
-            lightColor = glm::clamp(lightColor, BLACK, WHITE);
-        }
-    }
-
-    return lightColor;
-}
-
-glm::vec3 SequentialRenderer::raycastRecursive(Ray &ray, unsigned int recursive) {
-    glm::vec3 lightColor = BLACK;
-    if(recursive == 0) {
-        return lightColor;
-    }
-
-    RaycastHit hit{};
-    hit.distance = std::numeric_limits<float>::max();
-    glm::vec3 hitColor;
-
-    RaycastHit currentHit{};
-    for (Sphere& sphere : scene->spheres) {
-        if (raySphereIntersect(ray, sphere, currentHit) && currentHit.distance < hit.distance) {
-            hit = currentHit;
-            hitColor = sphere.color;
-        }
-    }
-
-    if (hit.hit) {
-        Ray reflectionRay = {hit.position, glm::reflect(ray.direction, hit.normal)};
-        glm::vec3 reflectedColor = raycastRecursive(reflectionRay, recursive - 1);
 
         float reflectionIntensity = DIFFUSE_REFLECTION_CONSTANT * glm::dot(-ray.direction, hit.normal);
-        lightColor += reflectionIntensity * reflectedColor;
-        lightColor += scene->lightData.ambientLightColor;
-        lightColor += shadowRay(hit);
-        lightColor *= hitColor;
-        lightColor += specular(ray, hit);
-
+            
+        lightColor += throughput * hitColor * scene->lightData.ambientLightColor;
+        lightColor += throughput * hitColor * shadowRay(hit);
+        lightColor += throughput * specular(ray, hit);
+        
         lightColor = glm::clamp(lightColor, BLACK, WHITE);
+
+        ray = {hit.position, glm::reflect(ray.direction, hit.normal)};
+        
+        throughput *= reflectionIntensity * hitColor;
     }
 
     return lightColor;

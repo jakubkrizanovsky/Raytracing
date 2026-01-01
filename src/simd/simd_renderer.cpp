@@ -11,22 +11,17 @@
 
 namespace rte {
 
-constexpr uint MAX_REFLECTIONS = 5;
-constexpr float MIN_HIT_DISTANCE = 0.001f;
-
 void SIMDRenderer::prepareFrame() {
     camera->updateCameraData(scene->camera);
     camera->prepareFrame(extent);
     uint8_t* data = reinterpret_cast<uint8_t*>(stagingData);
     
     tbb::parallel_for(static_cast<uint32_t>(0), extent.height, [&](uint32_t y) {
-    //for (auto y = 0; y < extent.height; y++) {
         for (auto x = 0; x < extent.width; x+=4) {
             uint32_t pixelIndex = x + y * extent.width;
 
             Ray_x4 ray = camera->getRay(x, y);
             Vec3_x4 pixelColor = raycast(ray);
-            //Vec3_x4 pixelColor = raycastRecursive(ray, MAX_REFLECTIONS);
 
             uint8x16_t bgra = packBGRA(pixelColor);
             vst1q_u8(&data[pixelIndex * 4], bgra);
@@ -58,6 +53,11 @@ Vec3_x4 SIMDRenderer::raycast(Ray_x4 ray) {
             uint32x4_t hitMask = raySphereIntersect(ray, sphere, &currentHit);
             uint32x4_t closerMask = vcltq_f32(currentHit.distance, hit.distance);
             uint32x4_t mask = vandq_u32(hitMask, closerMask);
+
+            // none of the rays hit - skip calculating values for this sphere
+            if (vmaxvq_u32(mask) == 0) {
+                continue;
+            }
 
             // select hit values based on mask
             hit.normal = currentHit.normal.select(mask, hit.normal);
@@ -99,128 +99,6 @@ Vec3_x4 SIMDRenderer::raycast(Ray_x4 ray) {
 
         // adjust throughput for next interation
         throughput *= reflectionIntensity * hitColor;
-    }
-
-    return lightColor;
-}
-
-Vec3_x4 SIMDRenderer::raycastOld(Ray_x4 sceneRay) {
-    Vec3_x4 lightColor = Vec3_x4(BLACK);
-
-    Ray_x4 rays[MAX_REFLECTIONS + 1];
-    RaycastHit_x4 hits[MAX_REFLECTIONS] {};
-    Vec3_x4 hitColors[MAX_REFLECTIONS] {};
-
-    rays[0] = sceneRay;
-
-    for (auto i = 0; i < MAX_REFLECTIONS; i++) {
-
-        hits[i].distance = vdupq_n_f32(std::numeric_limits<float>::max());
-        hits[i].mask = vdupq_n_u32(0);
-
-        RaycastHit_x4 hit{};
-
-        for (Sphere& sphere : scene->spheres) {
-            uint32x4_t hitMask = raySphereIntersect(rays[i], sphere, &hit);
-            uint32x4_t closerMask = vcltq_f32(hit.distance, hits[i].distance);
-            uint32x4_t mask = vandq_u32(hitMask, closerMask);
-
-            // select hit values based on mask
-            hits[i].normal.x = vbslq_f32(mask, hit.normal.x, hits[i].normal.x);
-            hits[i].normal.y = vbslq_f32(mask, hit.normal.y, hits[i].normal.y);
-            hits[i].normal.z = vbslq_f32(mask, hit.normal.z, hits[i].normal.z);
-            hits[i].position.x = vbslq_f32(mask, hit.position.x, hits[i].position.x);
-            hits[i].position.y = vbslq_f32(mask, hit.position.y, hits[i].position.y);
-            hits[i].position.z = vbslq_f32(mask, hit.position.z, hits[i].position.z);
-            hits[i].distance = vbslq_f32(mask, hit.distance, hits[i].distance);
-            hits[i].mask = vorrq_u32(hits[i].mask, hitMask);
-
-            Vec3_x4 sphereColor(sphere.color);
-            hitColors[i].x = vbslq_f32(mask, sphereColor.x, hitColors[i].x);
-            hitColors[i].y = vbslq_f32(mask, sphereColor.y, hitColors[i].y);
-            hitColors[i].z = vbslq_f32(mask, sphereColor.z, hitColors[i].z);
-        }
-
-        rays[i+1].origin = hits[i].position;
-        rays[i+1].direction = reflect(rays[i].direction, hits[i].normal);
-    }
-
-    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
-        Vec3_x4 rayDir = -rays[i].direction;
-        float32x4_t reflectionIntensity = dot_x4(rayDir, hits[i].normal);
-        reflectionIntensity = vmulq_f32(vdupq_n_f32(DIFFUSE_REFLECTION_CONSTANT), reflectionIntensity);
-        lightColor *= reflectionIntensity;
-        lightColor += ambientLight;
-        lightColor += shadowRay(hits[i]);
-        lightColor *= hitColors[i];
-        lightColor += specular(rays[i], hits[i]);
-        lightColor = lightColor.clamp01();
-
-        //mask if not hit
-        static const float32x4_t black = vdupq_n_f32(0.0f);
-        lightColor.x = vbslq_f32(hits[i].mask, lightColor.x, black);
-        lightColor.y = vbslq_f32(hits[i].mask, lightColor.y, black);
-        lightColor.z = vbslq_f32(hits[i].mask, lightColor.z, black);
-    }
-
-
-    return lightColor;
-}
-
-Vec3_x4 SIMDRenderer::raycastRecursive(Ray_x4 ray, unsigned int recursive) {
-    Vec3_x4 lightColor = Vec3_x4(BLACK);
-    if(recursive == 0) {
-        return lightColor;
-    }
-
-    RaycastHit_x4 hit{};
-    hit.distance = vdupq_n_f32(std::numeric_limits<float>::max());
-    hit.mask = vdupq_n_u32(0);
-
-    Vec3_x4 hitColor;
-
-    RaycastHit_x4 currentHit{};
-    for (Sphere& sphere : scene->spheres) {
-        uint32x4_t hitMask = raySphereIntersect(ray, sphere, &currentHit);
-        uint32x4_t closerMask = vcltq_f32(currentHit.distance, hit.distance);
-        uint32x4_t mask = vandq_u32(hitMask, closerMask);
-
-        // select hit values based on mask
-        hit.normal.x = vbslq_f32(mask, currentHit.normal.x, hit.normal.x);
-        hit.normal.y = vbslq_f32(mask, currentHit.normal.y, hit.normal.y);
-        hit.normal.z = vbslq_f32(mask, currentHit.normal.z, hit.normal.z);
-        hit.position.x = vbslq_f32(mask, currentHit.position.x, hit.position.x);
-        hit.position.y = vbslq_f32(mask, currentHit.position.y, hit.position.y);
-        hit.position.z = vbslq_f32(mask, currentHit.position.z, hit.position.z);
-        hit.distance = vbslq_f32(mask, currentHit.distance, hit.distance);
-        hit.mask = vorrq_u32(hit.mask, hitMask);
-
-        Vec3_x4 sphereColor(sphere.color);
-        hitColor.x = vbslq_f32(mask, sphereColor.x, hitColor.x);
-        hitColor.y = vbslq_f32(mask, sphereColor.y, hitColor.y);
-        hitColor.z = vbslq_f32(mask, sphereColor.z, hitColor.z);
-    }
-
-    //check if any ray hit
-    if (vmaxvq_u32(hit.mask) > 0) {
-        Ray_x4 reflectionRay = {hit.position, reflect(ray.direction, hit.normal)};
-        Vec3_x4 reflectedColor = raycastRecursive(reflectionRay, recursive - 1);
-
-        float32x4_t reflectionIntensity = dot_x4(-ray.direction, hit.normal);
-        reflectionIntensity = vmulq_f32(vdupq_n_f32(DIFFUSE_REFLECTION_CONSTANT), reflectionIntensity);
-
-        lightColor += reflectionIntensity * reflectedColor;
-        lightColor += ambientLight;
-        lightColor += shadowRay(hit);
-        lightColor *= hitColor;
-        lightColor += specular(ray, hit);
-        lightColor = lightColor.clamp01();
-
-        //mask if not hit
-        static const float32x4_t black = vdupq_n_f32(0.0f);
-        lightColor.x = vbslq_f32(hit.mask, lightColor.x, black);
-        lightColor.y = vbslq_f32(hit.mask, lightColor.y, black);
-        lightColor.z = vbslq_f32(hit.mask, lightColor.z, black);
     }
 
     return lightColor;
@@ -268,10 +146,16 @@ uint32x4_t SIMDRenderer::raySphereIntersect(Ray_x4 ray, Sphere &sphere, RaycastH
     float32x4_t determinant = vsubq_f32(vmulq_f32(b, b),
             vmulq_f32(vdupq_n_f32(4.0f), vmulq_f32(a, c)));
 
+    uint32x4_t mask = vcgtq_f32(determinant, vdupq_n_f32(0));
+
+    // exit early - none of the vectors hit the sphere
+    if (vmaxvq_u32(mask) == 0) {
+        return mask;
+    }
+
     float32x4_t x1 = vdivq_f32(vaddq_f32(vsqrtq_f32(determinant), b), vmulq_f32(vdupq_n_f32(-2.0f), a));
     float32x4_t x2 = vdivq_f32(vsubq_f32(vsqrtq_f32(determinant), b), vmulq_f32(vdupq_n_f32(2.0f), a));
-
-    uint32x4_t mask = vcgtq_f32(determinant, vdupq_n_f32(0));
+    
     x1 = vbslq_f32(mask, x1, vdupq_n_f32(std::numeric_limits<float>::max()));
     x2 = vbslq_f32(mask, x2, vdupq_n_f32(std::numeric_limits<float>::max()));
 
