@@ -1,0 +1,46 @@
+{
+    "camera": {
+        "position": [0, 5, -5],
+        "forward": [0, -1, 1],
+        "fov": 90,
+        "focusPoint": [0, 1, 0],
+        "orbitVelocity": 1
+    },
+    "lightData": {
+        "directionalLightDirection": [-0.5, -10, 1],
+        "directionalLightColor": [0.7, 0.7, 0.7],
+        "ambientLightColor": [0.1, 0.1, 0.1]
+    },
+    "spheres": [
+        {
+            "position": [0, 1, 0],
+            "radius": 1,
+            "color": [0.8, 0.8, 0.8]
+        },
+        {
+            "position": [0, -500, 0],
+            "radius": 500,
+            "color": [0.8, 0.8, 0.8]
+        },
+        {
+            "position": [505, 0, 0],
+            "radius": 500,
+            "color": [0.1, 0.8, 0.1]
+        },
+        {
+            "position": [-505, 0, 0],
+            "radius": 500,
+            "color": [0.8, 0.1, 0.1]
+        },
+        {
+            "position": [0, 0, 505],
+            "radius": 500,
+            "color": [0.8, 0.8, 0.8]
+        },
+        {
+            "position": [0, 0, -505],
+            "radius": 500,
+            "color": [0.8, 0.8, 0.8]
+        }
+    ]
+}
