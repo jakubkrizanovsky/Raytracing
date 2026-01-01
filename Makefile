@@ -2,7 +2,7 @@ include .env
 
 ARGS = --gpu scenes/default.json
 
-TARGET = a.out
+TARGET = raytracer.out
 SRC_DIR = ./src
 OBJ_DIR = ./obj
 

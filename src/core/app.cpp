@@ -27,11 +27,14 @@ void App::run() {
     sceneUpdater->setScene(scene);
 
     float duration = 0.0f;
+    double millisSum = 0.0f;
+    unsigned int frameCount = 0;
+
     while (!window->shouldClose()) {
+        sceneUpdater->updateScene(duration);
+
         auto startTime = std::chrono::steady_clock::now();
 
-        glfwPollEvents();
-        sceneUpdater->updateScene(duration);
         swapchain->drawFrame();
 
         auto endTime = std::chrono::steady_clock::now();
@@ -39,10 +42,20 @@ void App::run() {
 
         auto ms = std::chrono::duration<double, std::milli>(endTime - startTime);
         std::cout << ms.count() << " ms\n";
+
+        glfwPollEvents();
+
+        millisSum += ms.count();
+        frameCount++;
     }
 
     vkDeviceWaitIdle(device->getDevice());
-    std::cout << "Done!" << std::endl;
+
+    double avgFrameDuration = millisSum / frameCount;
+    std::cout << "Average frame time: " << avgFrameDuration << std::endl;
+    
+    double avgFPS = std::milli::den / avgFrameDuration;
+    std::cout << "Average FPS: " << avgFPS << std::endl;
 }
 
 std::shared_ptr<Renderer> App::createRenderer(RunType runType) {

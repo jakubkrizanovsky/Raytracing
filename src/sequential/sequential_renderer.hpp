@@ -20,6 +20,8 @@ private:
     std::unique_ptr<SequentialCamera> camera = nullptr;
 
     glm::vec3 raycast(Ray& ray);
+    glm::vec3 raycastOld(Ray& ray);
+    glm::vec3 raycastRecursive(Ray& ray, unsigned int recursive);
     glm::vec3 shadowRay(RaycastHit hit);
     glm::vec3 specular(Ray& ray, RaycastHit& hit);
     bool raySphereIntersect(Ray& ray, Sphere& sphere, RaycastHit& hit);

@@ -90,10 +90,12 @@ struct Vec3_x4 {
 
     Vec3_x4 normalized() const;
     Vec3_x4 clamp01() const;
+    Vec3_x4 select(uint32x4_t mask, const Vec3_x4& other) const;
+    Vec3_x4 select(uint32x4_t mask, const float32x4_t otherXYZ) const;
 
     Vec3_x4(float32x4_t x, float32x4_t y, float32x4_t z) : x{x}, y{y}, z{z} {}
 
-    Vec3_x4(glm::vec3 vec) {
+    explicit Vec3_x4(glm::vec3 vec) {
         x = vdupq_n_f32(vec.x);
         y = vdupq_n_f32(vec.y);
         z = vdupq_n_f32(vec.z);
@@ -101,7 +103,7 @@ struct Vec3_x4 {
 
     explicit Vec3_x4(float32x4_t xyz) : x(xyz), y(xyz), z(xyz) {}
 
-    Vec3_x4(float xyz) : x(vdupq_n_f32(xyz)), 
+    explicit Vec3_x4(float xyz) : x(vdupq_n_f32(xyz)), 
             y(vdupq_n_f32(xyz)), 
             z(vdupq_n_f32(xyz)) {}
 

@@ -9,13 +9,14 @@ void SIMDCamera::updateCameraData(Camera cameraData) {
 }
 
 void SIMDCamera::prepareFrame(VkExtent2D extent) {
-    right = glm::cross(UP, forward);
+    right = Vec3_x4(glm::cross(UP, forward));
+    Vec3_x4 up = Vec3_x4(UP);
 
     float gx = tan(0.5f * glm::radians(fov));
     float gy = -gx * (extent.height - 1) / (extent.width - 1);
     qx = 2 * gx / (extent.width - 1) * right;
-    qy = 2 * gy / (extent.height - 1) * UP;
-    p1m = Vec3_x4(forward) - gx * right - gy * UP;
+    qy = 2 * gy / (extent.height - 1) * up;
+    p1m = Vec3_x4(forward) - gx * right - gy * up;
 }
 
 Ray_x4 SIMDCamera::getRay(uint32_t xIndex, uint32_t yIndex) {

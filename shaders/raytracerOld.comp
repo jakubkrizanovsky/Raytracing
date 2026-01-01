@@ -121,35 +121,35 @@ vec3 shadowRay(RaycastHit hit) {
 
 vec3 raycast(Ray ray) {
     vec3 lightColor = vec3(0.0);
-    vec3 throughput = vec3(1.0);
+    Ray rays[MAX_REFLECTIONS + 1];
+    RaycastHit hits[MAX_REFLECTIONS];
+    vec3 hitColors[MAX_REFLECTIONS];
+    rays[0] = ray;
 
-    for (int i = 0; i < MAX_REFLECTIONS; i++) {
-        RaycastHit hit = RaycastHit(false, FLT_MAX, vec3(0.0), vec3(0.0));
-        vec3 hitColor = vec3(0.0);
-
+    for (int i = 0; i < MAX_REFLECTIONS; i++) { 
+        hits[i].hit = false;
+        hits[i].distance = FLT_MAX;
+        rays[i+1] = rays[i]; // make sure we get no junk values when we don't hit
         for (int s = 0; s < pushConstants.sphereCount; s++) {
-            RaycastHit currentHit = raySphereIntersect(ray, spheres[s]);
-            if (currentHit.hit && currentHit.distance < hit.distance) {
-                hit = currentHit;
-                hitColor = spheres[s].color;
+            RaycastHit hit = raySphereIntersect(rays[i], spheres[s]);
+            if (hit.hit && hit.distance < hits[i].distance) {
+                hits[i] = hit;
+                hitColors[i] = spheres[s].color;
+                rays[i+1].origin = hit.position;
+                rays[i+1].direction = reflect(rays[i].direction, hit.normal);
             }
         }
+    }
 
-        if (hit.hit) {
-            float reflectionIntensity = pushConstants.diffuseReflectionConstant * dot(-ray.direction, hit.normal);
-            
-            lightColor += throughput * hitColor * pushConstants.ambientLight;
-            lightColor += throughput * hitColor * shadowRay(hit);
-            lightColor += throughput * specular(ray, hit);
-            
+    for (int i = MAX_REFLECTIONS - 1; i >= 0; i--) {
+        if (hits[i].hit) {
+            float reflectionIntensity = dot(-rays[i].direction, hits[i].normal);
+            lightColor *= reflectionIntensity;
+            lightColor += pushConstants.ambientLight;
+            lightColor += shadowRay(hits[i]);
+            lightColor *= hitColors[i];
+            lightColor += specular(rays[i], hits[i]);
             lightColor = clamp(lightColor, 0.0, 1.0);
-
-            ray.origin = hit.position;
-            ray.direction = reflect(ray.direction, hit.normal);
-            
-            throughput *= reflectionIntensity * hitColor;
-        } else {
-            break;
         }
     }
 

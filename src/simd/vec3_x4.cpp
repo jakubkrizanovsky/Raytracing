@@ -31,6 +31,22 @@ Vec3_x4 Vec3_x4::clamp01() const {
     };
 }
 
+Vec3_x4 Vec3_x4::select(uint32x4_t mask, const Vec3_x4 &other) const {
+    return {
+        vbslq_f32(mask, x, other.x),
+        vbslq_f32(mask, y, other.y),
+        vbslq_f32(mask, z, other.z)
+    };
 }
+
+Vec3_x4 Vec3_x4::select(uint32x4_t mask, const float32x4_t otherXYZ) const {
+    return {
+        vbslq_f32(mask, x, otherXYZ),
+        vbslq_f32(mask, y, otherXYZ),
+        vbslq_f32(mask, z, otherXYZ)
+    };
+}
+
+} // namespace rte
 
 #endif // __ARM_NEON__
